@@ -29,8 +29,16 @@
         "android.permission.ACCESS_MEDIA_LOCATION",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO"
-      ]
+      ],
+      "package": "com.mlcoe.attendanceapp"
     },
     "web": {
       "favicon": "./assets/app-icon.png"
@@ -38,7 +46,8 @@
     "updates": {
       "fallbackToCacheTimeout": 0,
       "checkAutomatically": "ON_LOAD",
-      "enabled": true
+      "enabled": true,
+      "url": "https://u.expo.dev/1bf8839e-0da4-4370-ba9d-eecffc897ce4"
     },
     "plugins": [
       "expo-router",
@@ -56,6 +65,9 @@
       "eas": {
         "projectId": "1bf8839e-0da4-4370-ba9d-eecffc897ce4"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
