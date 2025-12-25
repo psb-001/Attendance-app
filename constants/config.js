@@ -1,5 +1,5 @@
 export const SUBJECT_URLS = {
-    'EG': 'https://script.google.com/macros/s/AKfycbwfOIQOE3uiwJpfb86NQgX_u4Irfz1VvQdzmucT6GtX0zir_DiV2JIlkYtFARDaUraQ/exec',
+    'EG': 'https://script.google.com/macros/s/AKfycbw7lbBr-XJ4tPA2xQxCc2mSFcmw9HcazdbHV1HENFod1I1O6vbcAJ3CxbdWSVKaVbfx/exec',
     'BEEE': 'https://script.google.com/macros/s/AKfycbyG2_BULAOlEyYTFCKc1FUIwYB8GcUL23sm5Cd-YOvrrW5_HYGj45Q6rKtQ24rNutBQhw/exec',
     'M1': 'https://script.google.com/macros/s/AKfycbxcOvA6dUrA5e482pZnIOJ_kg4RkpwApTP0EPas6KTUWmLkL_2sv8U0_aLA9hJp2AtE8A/exec',
     'BCME': 'https://script.google.com/macros/s/AKfycbx1CIJMfQYP0w7HgV9kd1p19y8PZyo0nZt0PZPIJk2zViohCLCKl7M_883B0pBJSZm4/exec',

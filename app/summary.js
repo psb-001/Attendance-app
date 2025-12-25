@@ -17,6 +17,7 @@ export default function SummaryScreen() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+    const [attendance, setAttendance] = useState(null); // Add state for attendance
     const viewShotRef = useRef();
 
     useEffect(() => {
@@ -25,7 +26,8 @@ export default function SummaryScreen() {
 
     const loadData = async () => {
         try {
-            const attendance = await getAttendance(date, division, subject);
+            const fetchedAttendance = await getAttendance(date, division, subject);
+            setAttendance(fetchedAttendance); // Store in state
             const submitted = await isSubmitted(date, division, subject);
             setAlreadySubmitted(submitted);
 
@@ -36,7 +38,7 @@ export default function SummaryScreen() {
             const absentList = [];
 
             filteredStudents.forEach(s => {
-                if (attendance && attendance[s.rollNo]) {
+                if (fetchedAttendance && fetchedAttendance[s.rollNo]) {
                     presentCount++;
                 } else {
                     absentList.push(s);
@@ -118,6 +120,8 @@ export default function SummaryScreen() {
                                 }]
                             );
                         } catch (error) {
+                            await resetSubmission(date, division, subject);
+                            setAlreadySubmitted(false);
                             Alert.alert(
                                 'Reset Complete',
                                 'Failed to delete from Google Sheet, but reset locally. You can now edit the attendance.',
@@ -129,8 +133,6 @@ export default function SummaryScreen() {
                                     })
                                 }]
                             );
-                            await resetSubmission(date, division, subject);
-                            setAlreadySubmitted(false);
                         }
                     }
                 }
@@ -146,12 +148,24 @@ export default function SummaryScreen() {
             return;
         }
 
+        // Prevent duplicate submissions
+        if (alreadySubmitted) {
+            Alert.alert('Already Submitted', 'This attendance has already been submitted.');
+            return;
+        }
+
         setSubmitting(true);
         try {
+            const filteredStudents = studentsData.filter(s => s.division === division);
             const payload = {
                 date,
                 division,
                 subject,
+                studentStatuses: filteredStudents.map(s => ({
+                    rollNo: s.rollNo,
+                    name: s.name,
+                    status: (attendance && attendance[s.rollNo]) ? 1 : 0
+                })),
                 total: stats.total,
                 present: stats.present,
                 absent: stats.absent,
@@ -160,15 +174,22 @@ export default function SummaryScreen() {
             };
 
             const result = await submitAttendance(webhookUrl, payload);
+
+            // Only mark as submitted if API call succeeded
             await markAsSubmitted(date, division, subject);
             setAlreadySubmitted(true);
+
             Alert.alert(
                 'Success',
                 `Data saved to: "${result.spreadsheetName}"\nSheet: "${result.sheetName}"\n\nURL: ${result.spreadsheetUrl}`,
                 [{ text: 'OK', onPress: () => router.push('/') }]
             );
         } catch (error) {
-            Alert.alert('Error', `Failed to submit: ${error.message}`);
+            // Don't mark as submitted on error
+            Alert.alert(
+                'Submission Failed',
+                `Error: ${error.message}\n\nData saved locally but not submitted to Google Sheets. Please try again.`
+            );
         } finally {
             setSubmitting(false);
         }
