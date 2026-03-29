@@ -1,23 +1,45 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { View, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { Text, Button, Card, List, Divider, ActivityIndicator } from 'react-native-paper';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import studentsData from '../data/students.json';
 import { getAttendance, markAsSubmitted, isSubmitted, resetSubmission } from '../services/storage';
 import { submitAttendance } from '../services/api';
-import { SUBJECT_URLS } from '../constants/config';
+import { GOOGLE_SCRIPT_URL } from '../constants/config';
+import { supabase } from '../lib/supabase';
+import { ThemeContext } from '../context/ThemeContext';
+import EmptyState from '../components/EmptyState';
 
 export default function SummaryScreen() {
-    const { date, division, subject } = useLocalSearchParams();
+    const { date, branch, subject } = useLocalSearchParams();
     const router = useRouter();
     const [stats, setStats] = useState(null);
     const [absentStudents, setAbsentStudents] = useState([]);
+    const { isDark } = useContext(ThemeContext);
+    const t = (light, dark) => isDark ? dark : light;
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return 'Today';
+        try {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            return dateObj.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+            });
+        } catch (e) {
+            return dateStr;
+        }
+    };
+
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-    const [attendance, setAttendance] = useState(null); // Add state for attendance
+    const [attendance, setAttendance] = useState(null);
+    const [allStudents, setAllStudents] = useState([]);
     const viewShotRef = useRef();
 
     useEffect(() => {
@@ -26,18 +48,31 @@ export default function SummaryScreen() {
 
     const loadData = async () => {
         try {
-            const fetchedAttendance = await getAttendance(date, division, subject);
-            setAttendance(fetchedAttendance); // Store in state
-            const submitted = await isSubmitted(date, division, subject);
+            const fetchedAttendance = await getAttendance(date, branch, subject);
+            setAttendance(fetchedAttendance);
+            const submitted = await isSubmitted(date, branch, subject);
             setAlreadySubmitted(submitted);
 
-            const filteredStudents = studentsData.filter(s => s.division === division);
-            const total = filteredStudents.length;
+            // Fetch students from Supabase
+            const { data: fetchedStudents, error } = await supabase
+                .from('students')
+                .select('roll_no, name')
+                .eq('branch', branch)
+                .order('roll_no', { ascending: true });
 
+            if (error) throw error;
+
+            const studentList = (fetchedStudents || []).map(s => ({
+                rollNo: s.roll_no,
+                name: s.name,
+            }));
+            setAllStudents(studentList);
+
+            const total = studentList.length;
             let presentCount = 0;
             const absentList = [];
 
-            filteredStudents.forEach(s => {
+            studentList.forEach(s => {
                 if (fetchedAttendance && fetchedAttendance[s.rollNo]) {
                     presentCount++;
                 } else {
@@ -48,15 +83,10 @@ export default function SummaryScreen() {
             const absentCount = total - presentCount;
             const percentage = total > 0 ? ((presentCount / total) * 100).toFixed(2) : 0;
 
-            setStats({
-                total,
-                present: presentCount,
-                absent: absentCount,
-                percentage,
-            });
+            setStats({ total, present: presentCount, absent: absentCount, percentage });
             setAbsentStudents(absentList);
         } catch (error) {
-            console.error(error);
+            console.error('SummaryScreen loadData error:', error);
         } finally {
             setLoading(false);
         }
@@ -101,12 +131,12 @@ export default function SummaryScreen() {
                             if (webhookUrl) {
                                 await submitAttendance(webhookUrl, {
                                     date,
-                                    division,
+                                    branch,
                                     subject,
                                     action: 'delete'
                                 });
                             }
-                            await resetSubmission(date, division, subject);
+                            await resetSubmission(date, branch, subject);
                             setAlreadySubmitted(false);
                             Alert.alert(
                                 'Reset Complete',
@@ -115,12 +145,12 @@ export default function SummaryScreen() {
                                     text: 'OK',
                                     onPress: () => router.push({
                                         pathname: '/attendance',
-                                        params: { date, division, subject }
+                                        params: { date, branch, subject }
                                     })
                                 }]
                             );
                         } catch (error) {
-                            await resetSubmission(date, division, subject);
+                            await resetSubmission(date, branch, subject);
                             setAlreadySubmitted(false);
                             Alert.alert(
                                 'Reset Complete',
@@ -129,7 +159,7 @@ export default function SummaryScreen() {
                                     text: 'OK',
                                     onPress: () => router.push({
                                         pathname: '/attendance',
-                                        params: { date, division, subject }
+                                        params: { date, branch, subject }
                                     })
                                 }]
                             );
@@ -141,13 +171,6 @@ export default function SummaryScreen() {
     };
 
     const handleSubmit = async () => {
-        const webhookUrl = SUBJECT_URLS[subject];
-
-        if (!webhookUrl) {
-            Alert.alert('Error', `No Google Sheet URL found for subject: ${subject}. Please configure it in constants/config.js`);
-            return;
-        }
-
         // Prevent duplicate submissions
         if (alreadySubmitted) {
             Alert.alert('Already Submitted', 'This attendance has already been submitted.');
@@ -156,39 +179,55 @@ export default function SummaryScreen() {
 
         setSubmitting(true);
         try {
-            const filteredStudents = studentsData.filter(s => s.division === division);
-            const payload = {
-                date,
-                division,
+            // --- PRIMARY: Write to Supabase first ---
+            const supabaseRows = allStudents.map(s => ({
+                branch,
                 subject,
-                studentStatuses: filteredStudents.map(s => ({
-                    rollNo: s.rollNo,
-                    name: s.name,
-                    status: (attendance && attendance[s.rollNo]) ? 1 : 0
-                })),
-                total: stats.total,
-                present: stats.present,
-                absent: stats.absent,
-                percentage: stats.percentage,
-                absentList: absentStudents.map(s => `${s.name} (${s.rollNo})`).join(', '),
-            };
+                date,
+                roll_no: s.rollNo,
+                status: (attendance && attendance[s.rollNo]) ? 1 : 0,
+            }));
 
-            const result = await submitAttendance(webhookUrl, payload);
+            const { error: supabaseError } = await supabase
+                .from('attendance_logs')
+                .upsert(supabaseRows, { onConflict: 'branch,subject,date,roll_no' });
 
-            // Only mark as submitted if API call succeeded
-            await markAsSubmitted(date, division, subject);
+            if (supabaseError) throw supabaseError;
+
+            // Mark as submitted locally
+            await markAsSubmitted(date, branch, subject);
             setAlreadySubmitted(true);
 
+            // --- SECONDARY: Try Google Sheets (non-blocking) ---
+            if (GOOGLE_SCRIPT_URL) {
+                const payload = {
+                    date,
+                    branch,
+                    subject,
+                    studentStatuses: allStudents.map(s => ({
+                        rollNo: s.rollNo,
+                        name: s.name,
+                        status: (attendance && attendance[s.rollNo]) ? 1 : 0,
+                    })),
+                    total: stats.total,
+                    present: stats.present,
+                    absent: stats.absent,
+                    percentage: stats.percentage,
+                };
+                submitAttendance(GOOGLE_SCRIPT_URL, payload).catch(err => {
+                    console.warn('Google Sheets sync failed (non-blocking):', err.message);
+                });
+            }
+
             Alert.alert(
-                'Success',
-                `Data saved to: "${result.spreadsheetName}"\nSheet: "${result.sheetName}"\n\nURL: ${result.spreadsheetUrl}`,
+                'Submitted!',
+                'Attendance saved successfully to the database.',
                 [{ text: 'OK', onPress: () => router.push('/') }]
             );
         } catch (error) {
-            // Don't mark as submitted on error
             Alert.alert(
                 'Submission Failed',
-                `Error: ${error.message}\n\nData saved locally but not submitted to Google Sheets. Please try again.`
+                `Error: ${error.message}\n\nPlease check your connection and try again.`
             );
         } finally {
             setSubmitting(false);
@@ -197,51 +236,66 @@ export default function SummaryScreen() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" />
+            <View style={[styles.loadingContainer, { backgroundColor: t('#f5f5f5', '#000000') }]}>
+                <ActivityIndicator size="large" color="#3d637e" />
             </View>
         );
     }
 
     return (
-        <ScrollView style={styles.container}>
-            <Card style={styles.card}>
-                <Card.Title title="Summary" subtitle={`${date} - Division ${division}`} />
+        <ScrollView style={[styles.container, { backgroundColor: t('#f5f5f5', '#000000') }]}>
+            <Card style={[styles.card, { backgroundColor: t('white', '#1e1e1e') }]}>
+                <Card.Title 
+                    title="Attendance Summary" 
+                    subtitle={`${formatDate(date)} • ${branch}`} 
+                    titleStyle={{ color: t('black', 'white'), fontWeight: 'bold' }}
+                    subtitleStyle={{ color: t('#666', '#aaa') }}
+                />
                 <Card.Content>
                     <View style={styles.statRow}>
-                        <Text variant="bodyLarge">Subject:</Text>
-                        <Text variant="bodyLarge" style={styles.bold}>{subject}</Text>
+                        <Text variant="bodyLarge" style={{ color: t('black', 'white') }}>Subject:</Text>
+                        <Text variant="bodyLarge" style={[styles.bold, { color: t('black', 'white') }]}>{subject}</Text>
                     </View>
                     <View style={styles.statRow}>
-                        <Text variant="bodyLarge">Total Students:</Text>
-                        <Text variant="bodyLarge" style={styles.bold}>{stats?.total}</Text>
+                        <Text variant="bodyLarge" style={{ color: t('black', 'white') }}>Total Students:</Text>
+                        <Text variant="bodyLarge" style={[styles.bold, { color: t('black', 'white') }]}>{stats?.total}</Text>
                     </View>
                     <View style={styles.statRow}>
-                        <Text variant="bodyLarge">Present:</Text>
-                        <Text variant="bodyLarge" style={{ ...styles.bold, color: 'green' }}>{stats?.present}</Text>
+                        <Text variant="bodyLarge" style={{ color: t('black', 'white') }}>Present:</Text>
+                        <Text variant="bodyLarge" style={[styles.bold, { color: '#4caf50' }]}>{stats?.present}</Text>
                     </View>
                     <View style={styles.statRow}>
-                        <Text variant="bodyLarge">Absent:</Text>
-                        <Text variant="bodyLarge" style={{ ...styles.bold, color: 'red' }}>{stats?.absent}</Text>
+                        <Text variant="bodyLarge" style={{ color: t('black', 'white') }}>Absent:</Text>
+                        <Text variant="bodyLarge" style={[styles.bold, { color: '#f44336' }]}>{stats?.absent}</Text>
                     </View>
                     <View style={styles.statRow}>
-                        <Text variant="bodyLarge">Percentage:</Text>
-                        <Text variant="bodyLarge" style={styles.bold}>{stats?.percentage}%</Text>
+                        <Text variant="bodyLarge" style={{ color: t('black', 'white') }}>Percentage:</Text>
+                        <Text variant="bodyLarge" style={[styles.bold, { color: t('black', 'white') }]}>{stats?.percentage}%</Text>
                     </View>
                 </Card.Content>
             </Card>
 
             <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }}>
-                <Card style={styles.card}>
-                    <Card.Title title="Absent Students" subtitle={`${subject} - ${date} - Division ${division}`} />
+                <Card style={[styles.card, { backgroundColor: t('white', '#1e1e1e') }]}>
+                    <Card.Title 
+                        title="Absent Students" 
+                        subtitle={`${subject} - ${date} - Branch ${branch}`} 
+                        titleStyle={{ color: t('black', 'white') }}
+                        subtitleStyle={{ color: t('#666', '#aaa') }}
+                    />
                     <Card.Content>
                         {absentStudents.length === 0 ? (
-                            <Text>All students present!</Text>
+                            <EmptyState 
+                                icon="party-popper" 
+                                message="Perfect Attendance!" 
+                                subMessage="Every student is present today."
+                                style={{ marginVertical: 10, padding: 20 }}
+                            />
                         ) : (
                             absentStudents.map((s) => (
                                 <View key={s.rollNo}>
-                                    <Text>{s.rollNo}. {s.name}</Text>
-                                    <Divider style={styles.divider} />
+                                    <Text style={{ color: t('black', 'white') }}>{s.rollNo}. {s.name}</Text>
+                                    <Divider style={[styles.divider, { backgroundColor: t('#eee', '#333') }]} />
                                 </View>
                             ))
                         )}
@@ -251,7 +305,7 @@ export default function SummaryScreen() {
 
             {absentStudents.length > 0 && (
                 <Button
-                    mode="outlined"
+                    mode={isDark ? "contained-tonal" : "outlined"}
                     icon="share-variant"
                     onPress={handleDownload}
                     style={styles.downloadButton}
@@ -260,7 +314,7 @@ export default function SummaryScreen() {
                 </Button>
             )}
 
-            <Card style={styles.card}>
+            <Card style={[styles.card, { backgroundColor: t('white', '#1e1e1e') }]}>
                 <Card.Content>
                     <Button
                         mode="contained"

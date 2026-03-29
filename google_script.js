@@ -9,7 +9,7 @@ function doPost(e) {
 
         // 2. Open Sheet
         const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sheetName = "Division " + data.division;
+        const sheetName = data.branch; // Using branch name directly, e.g., "Computer_Engineering"
         let sheet = ss.getSheetByName(sheetName);
 
         // 3. Create Sheet if missing (Only for submit)

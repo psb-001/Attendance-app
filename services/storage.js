@@ -2,22 +2,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY_PREFIX = 'attendance_';
 
-export const getAttendanceKey = (date, division, subject) => {
-    return `${STORAGE_KEY_PREFIX}${date}_${division}_${subject}`;
+export const getAttendanceKey = (date, branch, subject) => {
+    return `${STORAGE_KEY_PREFIX}${date}_${branch}_${subject}`;
 };
 
-export const saveAttendance = async (date, division, subject, data) => {
+export const saveAttendance = async (date, branch, subject, data) => {
     try {
-        const key = getAttendanceKey(date, division, subject);
+        const key = getAttendanceKey(date, branch, subject);
         await AsyncStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
         console.error('Failed to save attendance', e);
     }
 };
 
-export const getAttendance = async (date, division, subject) => {
+export const getAttendance = async (date, branch, subject) => {
     try {
-        const key = getAttendanceKey(date, division, subject);
+        const key = getAttendanceKey(date, branch, subject);
         const jsonValue = await AsyncStorage.getItem(key);
         return jsonValue != null ? JSON.parse(jsonValue) : null;
     } catch (e) {
@@ -26,18 +26,18 @@ export const getAttendance = async (date, division, subject) => {
     }
 };
 
-export const markAsSubmitted = async (date, division, subject) => {
+export const markAsSubmitted = async (date, branch, subject) => {
     try {
-        const key = `${getAttendanceKey(date, division, subject)}_submitted`;
+        const key = `${getAttendanceKey(date, branch, subject)}_submitted`;
         await AsyncStorage.setItem(key, 'true');
     } catch (e) {
         console.error('Failed to mark as submitted', e);
     }
 };
 
-export const isSubmitted = async (date, division, subject) => {
+export const isSubmitted = async (date, branch, subject) => {
     try {
-        const key = `${getAttendanceKey(date, division, subject)}_submitted`;
+        const key = `${getAttendanceKey(date, branch, subject)}_submitted`;
         const value = await AsyncStorage.getItem(key);
         return value === 'true';
     } catch (e) {
@@ -46,9 +46,9 @@ export const isSubmitted = async (date, division, subject) => {
     }
 };
 
-export const resetSubmission = async (date, division, subject) => {
+export const resetSubmission = async (date, branch, subject) => {
     try {
-        const key = `${getAttendanceKey(date, division, subject)}_submitted`;
+        const key = `${getAttendanceKey(date, branch, subject)}_submitted`;
         await AsyncStorage.removeItem(key);
     } catch (e) {
         console.error('Failed to reset submission status', e);
