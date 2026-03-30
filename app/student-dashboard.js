@@ -6,28 +6,18 @@ import { supabase } from '../lib/supabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemeContext } from '../context/ThemeContext';
 import EmptyState from '../components/EmptyState';
-import DateTimePicker from '@react-native-community/datetimepicker';
-
-const generateMonthDays = (currentDate) => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const days = [];
-    const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-
-    for (let i = 1; i <= daysInMonth; i++) {
-        const dateObj = new Date(year, month, i);
-        days.push({
-            id: i,
-            dayName: weekdays[dateObj.getDay()],
-            date: i.toString()
-        });
-    }
-    return days;
-};
+import ResourceCard from '../components/ResourceCard';
+import AppSidebar from '../components/AppSidebar';
+import InfoSections from '../components/InfoSections';
+import ProfileTab from '../components/ProfileTab';
+import CalendarStrip from '../components/CalendarStrip';
+import AppHeader from '../components/AppHeader';
+import { generateMonthDays, getInitials } from '../utils/dashboardHelpers';
 
 export default function StudentDashboard() {
     const router = useRouter();
+    const [activeTab, setActiveTab] = useState('home');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date().getDate().toString());
@@ -61,58 +51,78 @@ export default function StudentDashboard() {
     });
 
     const init = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        // 1. Fetch profile (includes roll_no and branch for students)
-        const { data: profileData } = await supabase
-            .from('profiles')
-            .select('full_name, branch, avatar_url, roll_no')
-            .eq('id', session.user.id)
-            .single();
-
-        setProfile(profileData);
-
-        // 2. If student has roll_no and branch, fetch real attendance
-        if (profileData?.roll_no && profileData?.branch) {
-            const { data: logs } = await supabase
-                .from('attendance_logs')
-                .select('status, subject, date')
-                .eq('roll_no', profileData.roll_no)
-                .eq('branch', profileData.branch);
-
-            if (logs && logs.length > 0) {
-                const total = logs.length;
-                const present = logs.filter(l => l.status === 1).length;
-                const pct = Math.round((present / total) * 100);
-                setAttendancePct(pct);
-                setAttendanceStats({ present, total });
-
-                // Build per-subject attendance map for today
-                const now = new Date();
-                const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                const todayMap = {};
-                logs.filter(l => l.date === today).forEach(l => {
-                    todayMap[l.subject] = l.status === 1;
-                });
-                setSubjectAttendance(todayMap);
-            } else {
-                setAttendancePct(0);
-                setAttendanceStats({ present: 0, total: 0 });
+        try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError || !session) {
+                console.log("Session invalid, redirecting to login:", sessionError?.message);
+                await supabase.auth.signOut();
+                router.replace('/login');
+                return;
             }
+
+            // 1. Fetch profile using wildcard to avoid "column not found" errors
+            const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profileError) {
+                console.error("Error fetching profile:", profileError.message);
+            }
+
+            setProfile(profileData);
+
+            // 2. If student has roll_no and branch, fetch real attendance
+            if (profileData?.roll_no && profileData?.branch) {
+                const { data: logs } = await supabase
+                    .from('attendance_logs')
+                    .select('status, subject, date')
+                    .eq('roll_no', profileData.roll_no)
+                    .eq('branch', profileData.branch);
+
+                if (logs && logs.length > 0) {
+                    const total = logs.length;
+                    const present = logs.filter(l => l.status === 1).length;
+                    const pct = Math.round((present / total) * 100);
+                    setAttendancePct(pct);
+                    setAttendanceStats({ present, total });
+
+                    // Build per-subject attendance map for today
+                    const now = new Date();
+                    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    const todayMap = {};
+                    logs.filter(l => l.date === today).forEach(l => {
+                        todayMap[l.subject] = l.status === 1;
+                    });
+                    setSubjectAttendance(todayMap);
+                } else {
+                    setAttendancePct(0);
+                    setAttendanceStats({ present: 0, total: 0 });
+                }
+            }
+        } catch (err) {
+            console.error("Auth initialization failed:", err);
+            await supabase.auth.signOut();
+            router.replace('/login');
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     };
 
-    const getInitials = (name) => {
-        if (!name) return 'ST';
-        const parts = name.split(' ');
-        if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-        return name.substring(0, 2).toUpperCase();
-    };
+    // getInitials imported from utils/dashboardHelpers
 
     const t = (light, dark) => isDark ? dark : light;
+
+    const handleLogout = async () => {
+        try {
+            await supabase.auth.signOut();
+            router.replace('/login');
+        } catch (err) {
+            console.error("Logout failed:", err);
+        }
+    };
 
     if (loading) {
         return (
@@ -137,21 +147,6 @@ export default function StudentDashboard() {
         setCalendarDate(newDate);
         setSelectedDate('1');
     };
-
-    const renderCalendarItem = ({ item }) => (
-        <TouchableOpacity
-            onPress={() => setSelectedDate(item.date)}
-            style={[
-                styles.calendarDay,
-                { backgroundColor: t('#ffffff', '#121212') },
-                item.date === selectedDate && styles.activeDay
-            ]}
-        >
-            <Text style={[styles.dayText, item.date === selectedDate && styles.activeDayText]}>{item.dayName}</Text>
-            <Text style={[styles.dateText, { color: t('#2f333a', '#ffffff') }, item.date === selectedDate && styles.activeDayText]}>{item.date}</Text>
-            {item.date === selectedDate && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-    );
 
     const studentSubjects = profile?.subjects && profile.subjects.length > 0 
         ? profile.subjects 
@@ -220,59 +215,37 @@ export default function StudentDashboard() {
 
     return (
         <View style={[styles.root, { backgroundColor: t('#f9f9fe', '#000000') }]}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.push('/profile')} style={styles.headerUser}>
-                    {profile?.avatar_url ? (
-                        <Image source={{ uri: profile.avatar_url }} style={styles.headerAvatar} />
-                    ) : (
-                        <Surface style={[styles.headerAvatar, { backgroundColor: '#e3f2fd', justifyContent: 'center', alignItems: 'center' }]} elevation={0}>
-                            <Text style={{ fontSize: 14, fontWeight: '800', color: '#3d637e' }}>{getInitials(profile?.full_name)}</Text>
-                        </Surface>
-                    )}
-                    <Text variant="titleMedium" style={[styles.headerTitle, { color: t('#3d637e', '#ffffff') }]}>My Dashboard</Text>
-                </TouchableOpacity>
-                <IconButton 
-                    icon={isDark ? 'weather-sunny' : 'weather-night'} 
-                    size={24} 
-                    onPress={toggleTheme} 
-                    iconColor={t('#454950', '#ffffff')}
-                />
-            </View>
+            <AppHeader
+                activeTab={activeTab}
+                profile={profile}
+                onOpenMenu={() => setIsSidebarOpen(true)}
+                onAvatarPress={() => setActiveTab('profile')}
+                roleTitle="STUDENT DASHBOARD"
+            />
 
-            <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 120 }]} showsVerticalScrollIndicator={false}>
-                <View style={styles.greetingSection}>
-                    <Text variant="displaySmall" style={[styles.greetingTitle, { color: t('#2f333a', '#ffffff') }]}>
-                        {getGreeting()}, {profile?.full_name?.split(' ')[0] || 'Alex'}!
-                    </Text>
-                    <Text variant="bodyLarge" style={[styles.greetingDate, { color: t('#91939c', '#aeafb4') }]}>{formattedDate}</Text>
-                </View>
-
-                <View style={[styles.calendarContainer, { backgroundColor: t('#ffffff', '#1e1e1e'), padding: 16, borderRadius: 24 }]}>
-                    <View style={styles.calendarControls}>
-                        <TouchableOpacity style={styles.calendarMonthSelector} onPress={() => setShowDatePicker(true)}>
-                            <MaterialCommunityIcons name="calendar-month-outline" size={20} color={t('#2f333a', '#ffffff')} style={{ marginRight: 8 }} />
-                            <Text style={[styles.calendarMonthText, { color: t('#2f333a', '#ffffff') }]}>
-                                {calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            <ScrollView 
+                contentContainerStyle={[styles.container, { paddingBottom: 120 }]} 
+                showsVerticalScrollIndicator={false}
+            >
+                {activeTab === 'home' && (
+                    <>
+                        <View style={styles.greetingSection}>
+                            <Text variant="displaySmall" style={[styles.greetingTitle, { color: t('#2f333a', '#ffffff') }]}>
+                                {getGreeting()}, {profile?.full_name?.split(' ')[0] || 'Alex'}!
                             </Text>
-                            <MaterialCommunityIcons name="chevron-right" size={20} color={t('#2f333a', '#ffffff')} style={{ marginLeft: 4 }} />
-                        </TouchableOpacity>
-                        
-                        <View style={styles.calendarArrows}>
-                            <TouchableOpacity onPress={handlePrevMonth} style={styles.calendarArrowBtn}>
-                                <MaterialCommunityIcons name="chevron-left" size={24} color={t('#2f333a', '#ffffff')} />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={handleNextMonth} style={[styles.calendarArrowBtn, { marginLeft: 16 }]}>
-                                <MaterialCommunityIcons name="chevron-right" size={24} color={t('#2f333a', '#ffffff')} />
-                            </TouchableOpacity>
+                            <Text variant="bodyLarge" style={[styles.greetingDate, { color: t('#91939c', '#aeafb4') }]}>{formattedDate}</Text>
                         </View>
-                    </View>
 
-                    {showDatePicker && (
-                        <DateTimePicker
-                            value={calendarDate}
-                            mode="date"
-                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                            onChange={(event, date) => {
+                        <CalendarStrip
+                            monthDays={monthDays}
+                            selectedDate={selectedDate}
+                            onSelectDate={setSelectedDate}
+                            calendarDate={calendarDate}
+                            onPrevMonth={handlePrevMonth}
+                            onNextMonth={handleNextMonth}
+                            showDatePicker={showDatePicker}
+                            onOpenDatePicker={() => setShowDatePicker(true)}
+                            onDatePickerChange={(event, date) => {
                                 setShowDatePicker(false);
                                 if (date) {
                                     setCalendarDate(date);
@@ -280,99 +253,142 @@ export default function StudentDashboard() {
                                 }
                             }}
                         />
-                    )}
 
-                    <FlatList
-                        horizontal
-                        data={monthDays}
-                        renderItem={renderCalendarItem}
-                        keyExtractor={item => item.id.toString()}
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.calendarList}
-                        initialScrollIndex={Math.max(0, parseInt(selectedDate) - 3)}
-                        getItemLayout={(data, index) => ({ length: 76, offset: 76 * index, index })}
-                    />
-                </View>
+                        <View style={[styles.metricCard, { backgroundColor: t('#ffffff', '#1e1e1e'), borderColor: t('rgba(174, 178, 187, 0.1)', 'rgba(255, 255, 255, 0.05)') }]}>
+                            <Text style={styles.metricLabel}>PERFORMANCE METRIC</Text>
+                            <Text variant="titleLarge" style={[styles.metricTitle, { color: t('#2f333a', '#ffffff') }]}>Overall Attendance</Text>
+                            
+                            <View style={styles.meterContainer}>
+                                <View style={[styles.meterCircle, { borderColor: t('#f2f3fa', '#2a2d35') }]}>
+                                    <View style={[styles.meterProgress, { transform: [{ rotate: '45deg' }] }]} />
+                                    <View style={styles.meterInner}>
+                                        <Text style={[styles.meterValue, { color: t('#2f333a', '#ffffff') }]}>{attendancePct}%</Text>
+                                        <Text style={styles.meterStatus}>
+                                            {attendancePct >= 85 ? 'EXCELLENT' : attendancePct >= 75 ? 'GOOD' : attendancePct > 0 ? 'LOW' : 'NO DATA'}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
 
-                <View style={[styles.metricCard, { backgroundColor: t('#ffffff', '#1e1e1e'), borderColor: t('rgba(174, 178, 187, 0.1)', 'rgba(255, 255, 255, 0.05)') }]}>
-                    <Text style={styles.metricLabel}>PERFORMANCE METRIC</Text>
-                    <Text variant="titleLarge" style={[styles.metricTitle, { color: t('#2f333a', '#ffffff') }]}>Overall Attendance</Text>
-                    
-                    <View style={styles.meterContainer}>
-                        <View style={[styles.meterCircle, { borderColor: t('#f2f3fa', '#2a2d35') }]}>
-                            <View style={[styles.meterProgress, { transform: [{ rotate: '45deg' }] }]} />
-                            <View style={styles.meterInner}>
-                                <Text style={[styles.meterValue, { color: t('#2f333a', '#ffffff') }]}>{attendancePct}%</Text>
-                                <Text style={styles.meterStatus}>
-                                    {attendancePct >= 85 ? 'EXCELLENT' : attendancePct >= 75 ? 'GOOD' : attendancePct > 0 ? 'LOW' : 'NO DATA'}
-                                </Text>
+                            <View style={styles.attendanceRow}>
+                                <View style={styles.attendanceStat}>
+                                    <Text style={[styles.attendanceStatNum, { color: '#426658' }]}>{attendanceStats.present}</Text>
+                                    <Text style={styles.attendanceStatLabel}>PRESENT</Text>
+                                </View>
+                                <View style={styles.attendanceStatDivider} />
+                                <View style={styles.attendanceStat}>
+                                    <Text style={[styles.attendanceStatNum, { color: t('#2f333a', '#ffffff') }]}>{attendanceStats.total}</Text>
+                                    <Text style={styles.attendanceStatLabel}>TOTAL</Text>
+                                </View>
+                                <View style={styles.attendanceStatDivider} />
+                                <View style={styles.attendanceStat}>
+                                    <Text style={[styles.attendanceStatNum, { color: '#fa746f' }]}>{attendanceStats.total - attendanceStats.present}</Text>
+                                    <Text style={styles.attendanceStatLabel}>ABSENT</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.metricFooter}>
+                                <MaterialCommunityIcons name="trending-up" size={16} color="#426658" />
+                                <Text style={styles.metricFooterText}>3% increase from last semester</Text>
                             </View>
                         </View>
+
+                        <View style={styles.scheduleHeader}>
+                            <Text variant="titleLarge" style={[styles.scheduleTitle, { color: t('#2f333a', '#ffffff') }]}>My Subjects</Text>
+                        </View>
+
+                        <View style={styles.scheduleList}>
+                            {studentSubjects.length > 0 ? (
+                                <View style={[styles.scheduleListContainer, { backgroundColor: t('#ffffff', '#1e1e1e') }]}>
+                                    {studentSubjects.map((sub, idx) => renderSubjectItem(sub, idx))}
+                                </View>
+                            ) : (
+                                <EmptyState 
+                                    icon="book-open-variant" 
+                                    message="No Subjects Scheduled" 
+                                    subMessage="Enjoy your free time!" 
+                                    style={{ marginVertical: 20 }}
+                                />
+                            )}
+                        </View>
+                    </>
+                )}
+
+                {activeTab === 'attendance' && (
+                    <View style={{ marginTop: 24 }}>
+                        <Text variant="headlineSmall" style={[styles.sectionTitle, { color: t('#2f333a', '#ffffff') }]}>Attendance History</Text>
+                        <Text style={[styles.sectionSub, { color: t('#91939c', '#aeafb4') }]}>Track your progress over time</Text>
+                        
+                        <View style={[styles.historyPlaceholder, { backgroundColor: t('#ffffff', '#1e1e1e') }]}>
+                            <EmptyState 
+                                icon="calendar-clock" 
+                                message="No Detailed History" 
+                                subMessage="Attendance history logging starts soon."
+                                style={{ marginVertical: 40 }}
+                            />
+                        </View>
                     </View>
+                )}
 
-                    <View style={styles.attendanceRow}>
-                        <View style={styles.attendanceStat}>
-                            <Text style={[styles.attendanceStatNum, { color: '#426658' }]}>{attendanceStats.present}</Text>
-                            <Text style={styles.attendanceStatLabel}>PRESENT</Text>
-                        </View>
-                        <View style={styles.attendanceStatDivider} />
-                        <View style={styles.attendanceStat}>
-                            <Text style={[styles.attendanceStatNum, { color: t('#2f333a', '#ffffff') }]}>{attendanceStats.total}</Text>
-                            <Text style={styles.attendanceStatLabel}>TOTAL</Text>
-                        </View>
-                        <View style={styles.attendanceStatDivider} />
-                        <View style={styles.attendanceStat}>
-                            <Text style={[styles.attendanceStatNum, { color: '#fa746f' }]}>{attendanceStats.total - attendanceStats.present}</Text>
-                            <Text style={styles.attendanceStatLabel}>ABSENT</Text>
+                {activeTab === 'resources' && (
+                    <View style={{ marginTop: 24 }}>
+                        <Text variant="headlineSmall" style={[styles.sectionTitle, { color: t('#2f333a', '#ffffff') }]}>Study Resources</Text>
+                        <Text style={[styles.sectionSub, { color: t('#91939c', '#aeafb4') }]}>Access materials from Google Drive</Text>
+                        
+                        <View style={{ marginTop: 20 }}>
+                            {studentSubjects.map((sub, idx) => (
+                                <ResourceCard key={idx} subject={sub} isDark={isDark} />
+                            ))}
                         </View>
                     </View>
+                )}
 
-                    <View style={styles.metricFooter}>
-                        <MaterialCommunityIcons name="trending-up" size={16} color="#426658" />
-                        <Text style={styles.metricFooterText}>3% increase from last semester</Text>
-                    </View>
-                </View>
+                {activeTab === 'profile' && (
+                    <ProfileTab profile={profile} onLogout={handleLogout} roleLabel="Academic Student" />
+                )}
 
-                <View style={styles.scheduleHeader}>
-                    <Text variant="titleLarge" style={[styles.scheduleTitle, { color: t('#2f333a', '#ffffff') }]}>My Subjects</Text>
-                </View>
-
-                <View style={styles.scheduleList}>
-                    {studentSubjects.length > 0 ? (
-                        <View style={[styles.scheduleListContainer, { backgroundColor: t('#ffffff', '#1e1e1e') }]}>
-                            {studentSubjects.map((sub, idx) => renderSubjectItem(sub, idx))}
-                        </View>
-                    ) : (
-                        <EmptyState 
-                            icon="book-open-variant" 
-                            message="No Subjects Scheduled" 
-                            subMessage="Enjoy your free time!" 
-                            style={{ marginVertical: 20 }}
-                        />
-                    )}
-                </View>
+                <InfoSections activeTab={activeTab} />
 
                 <View style={{ height: 100 }} />
             </ScrollView>
 
+            <AppSidebar
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+                profile={profile}
+                activeTab={activeTab}
+                onNavigate={setActiveTab}
+                onLogout={handleLogout}
+                fallbackName="Academic User"
+            />
+
             <Surface style={[styles.bottomNav, { backgroundColor: t('#ffffff', '#1e1e1e') }]} elevation={4}>
-                <TouchableOpacity style={styles.navItem}>
-                    <View style={[styles.navIconActive, { backgroundColor: t('#e3f2fd', 'rgba(61, 99, 126, 0.2)') }]}>
-                        <MaterialCommunityIcons name="home" size={24} color="#3d637e" />
+                <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('home')}>
+                    <View style={[activeTab === 'home' && styles.navIconActive, { backgroundColor: activeTab === 'home' ? t('#e3f2fd', 'rgba(61, 99, 126, 0.2)') : 'transparent' }]}>
+                        <MaterialCommunityIcons name="home" size={24} color={activeTab === 'home' ? "#3d637e" : t('#aeafb4', '#aeafb4')} />
                     </View>
-                    <Text style={styles.navLabelActive}>HOME</Text>
+                    <Text style={[activeTab === 'home' ? styles.navLabelActive : styles.navLabel, { color: activeTab === 'home' ? "#3d637e" : t('#aeafb4', '#aeafb4') }]}>HOME</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <MaterialCommunityIcons name="calendar-check-outline" size={24} color={t('#aeafb4', '#aeafb4')} />
-                    <Text style={[styles.navLabel, { color: t('#aeafb4', '#aeafb4') }]}>ATTENDANCE</Text>
+                
+                <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('attendance')}>
+                    <View style={[activeTab === 'attendance' && styles.navIconActive, { backgroundColor: activeTab === 'attendance' ? t('#e3f2fd', 'rgba(61, 99, 126, 0.2)') : 'transparent' }]}>
+                        <MaterialCommunityIcons name="calendar-check-outline" size={24} color={activeTab === 'attendance' ? "#3d637e" : t('#aeafb4', '#aeafb4')} />
+                    </View>
+                    <Text style={[activeTab === 'attendance' ? styles.navLabelActive : styles.navLabel, { color: activeTab === 'attendance' ? "#3d637e" : t('#aeafb4', '#aeafb4') }]}>ATTENDANCE</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <MaterialCommunityIcons name="book-open-variant" size={24} color={t('#aeafb4', '#aeafb4')} />
-                    <Text style={[styles.navLabel, { color: t('#aeafb4', '#aeafb4') }]}>COURSES</Text>
+
+                <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('resources')}>
+                    <View style={[activeTab === 'resources' && styles.navIconActive, { backgroundColor: activeTab === 'resources' ? t('#e3f2fd', 'rgba(61, 99, 126, 0.2)') : 'transparent' }]}>
+                        <MaterialCommunityIcons name="folder-open-outline" size={24} color={activeTab === 'resources' ? "#3d637e" : t('#aeafb4', '#aeafb4')} />
+                    </View>
+                    <Text style={[activeTab === 'resources' ? styles.navLabelActive : styles.navLabel, { color: activeTab === 'resources' ? "#3d637e" : t('#aeafb4', '#aeafb4') }]}>RESOURCES</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push('/profile')}>
-                    <MaterialCommunityIcons name="account-outline" size={24} color={t('#aeafb4', '#aeafb4')} />
-                    <Text style={[styles.navLabel, { color: t('#aeafb4', '#aeafb4') }]}>PROFILE</Text>
+
+                <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('profile')}>
+                    <View style={[activeTab === 'profile' && styles.navIconActive, { backgroundColor: activeTab === 'profile' ? t('#e3f2fd', 'rgba(61, 99, 126, 0.2)') : 'transparent' }]}>
+                        <MaterialCommunityIcons name="account-outline" size={24} color={activeTab === 'profile' ? "#3d637e" : t('#aeafb4', '#aeafb4')} />
+                    </View>
+                    <Text style={[activeTab === 'profile' ? styles.navLabelActive : styles.navLabel, { color: activeTab === 'profile' ? "#3d637e" : t('#aeafb4', '#aeafb4') }]}>PROFILE</Text>
                 </TouchableOpacity>
             </Surface>
         </View>
@@ -388,29 +404,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingTop: 50,
-        paddingHorizontal: 16,
-        paddingBottom: 10,
-    },
-    headerUser: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    headerAvatar: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#f2f3fa',
-        overflow: 'hidden',
-    },
-    headerTitle: {
-        fontWeight: '700',
-    },
+    // Header styles moved to AppHeader
     container: {
         paddingHorizontal: 24,
     },
@@ -426,67 +420,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
         fontWeight: '600',
     },
-    calendarContainer: {
-        marginBottom: 40,
-        shadowColor: '#3d637e',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.12,
-        shadowRadius: 20,
-        elevation: 8,
-        minHeight: 180, // Ensure enough height for the calendar content
-    },
-    calendarControls: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    calendarMonthSelector: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    calendarMonthText: {
-        fontSize: 16,
-        fontWeight: '800',
-    },
-    calendarArrows: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    calendarArrowBtn: {
-        padding: 4,
-    },
-    calendarList: {
-        gap: 12,
-    },
-    calendarDay: {
-        width: 64,
-        height: 84,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    activeDay: {
-        backgroundColor: '#3d637e',
-        shadowColor: '#3d637e',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 8,
-    },
-    dayText: {
-        fontSize: 10,
-        fontWeight: '900',
-        color: '#91939c',
-        marginBottom: 4,
-    },
-    dateText: {
-        fontSize: 18,
-        fontWeight: '900',
-    },
-    activeDayText: {
-        color: '#ffffff',
-    },
+    // Calendar styles moved to CalendarStrip component
     metricCard: {
         borderRadius: 32,
         padding: 24,
@@ -639,9 +573,43 @@ const styles = StyleSheet.create({
         letterSpacing: -0.3,
         marginBottom: 2,
     },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '900',
+        flex: 1,
+        textAlign: 'center',
+        letterSpacing: -0.5,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatarTouch: {
+        marginLeft: 4,
+    },
     subjectSub: {
         fontSize: 12,
         fontWeight: '600',
+    },
+    headerAvatar: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+    },
+    headerAvatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 19,
+    },
+    headerAvatarText: {
+        fontSize: 13,
+        fontWeight: '900',
+        textAlign: 'center',
+        includeFontPadding: false,
+        textAlignVertical: 'center',
     },
     scheduleIconWrap: {
         width: 52,
@@ -701,5 +669,21 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '900',
         color: '#3d637e',
-    }
+    },
+    sectionTitle: {
+        fontWeight: '900',
+        letterSpacing: -0.5,
+    },
+    sectionSub: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginTop: 4,
+    },
+    historyPlaceholder: {
+        marginTop: 24,
+        borderRadius: 32,
+        padding: 24,
+    },
+    // Internal Profile Tab Styles
+    // Profile, Sidebar & Info styles now in shared components
 });
