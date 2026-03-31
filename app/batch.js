@@ -10,16 +10,15 @@ const { width } = Dimensions.get('window');
 const CARD_GAP = 16;
 const CARD_WIDTH = (width - 48 - CARD_GAP) / 2;
 
-const BRANCHES = [
-    { value: 'AI / ML', label: 'AI / ML', icon: 'robot-outline', color: '#0984E3', bg: '#E3F2FD' },
-    { value: 'Computer Engineering', label: 'Computer\nEngineering', icon: 'code-braces', color: '#00B894', bg: '#E8F5E9' },
-    { value: 'Electronics and Telecommunication Engineering', label: 'E&TC', icon: 'chip', color: '#00CEC9', bg: '#E0F7FA' },
-    { value: 'Information Technology', label: 'Information\nTechnology', icon: 'monitor', color: '#636E72', bg: '#F5F5F5' },
+const BATCHES = [
+    { value: 'B1', label: 'Batch B1', icon: 'account-group', color: '#0984E3', bg: '#E3F2FD' },
+    { value: 'B2', label: 'Batch B2', icon: 'account-group', color: '#00B894', bg: '#E8F5E9' },
+    { value: 'B3', label: 'Batch B3', icon: 'account-group', color: '#00CEC9', bg: '#E0F7FA' },
 ];
 
-export default function BranchScreen() {
+export default function BatchScreen() {
     const router = useRouter();
-    const { subject, date } = useLocalSearchParams();
+    const { subject, date, branch } = useLocalSearchParams();
     const [authChecked, setAuthChecked] = useState(false);
     const { isDark } = useContext(ThemeContext);
 
@@ -53,15 +52,14 @@ export default function BranchScreen() {
         setAuthChecked(true);
     };
 
-    const handleSelect = (branchValue) => {
-        const isLab = subject && subject.toLowerCase().includes('lab');
-        
+    const handleSelect = (batchValue) => {
         router.push({
-            pathname: isLab ? '/batch' : '/attendance',
+            pathname: '/attendance',
             params: {
-                date: date || new Date().toISOString().split('T')[0],
-                branch: branchValue,
-                subject
+                date,
+                branch,
+                subject,
+                batch: batchValue
             }
         });
     };
@@ -78,33 +76,33 @@ export default function BranchScreen() {
         <View style={[styles.container, { backgroundColor: t('#f9f9fe', '#000000') }]}>
             <View style={styles.headerSection}>
                 <Text style={[styles.headerTitle, { color: t('#2f333a', '#ffffff') }]}>
-                    Select Branch
+                    Select Batch
                 </Text>
                 <Text style={[styles.headerSub, { color: t('#91939c', '#aeafb4') }]}>
-                    {subject} • {formatDate(date)}
+                    {subject} • {branch} • {formatDate(date)}
                 </Text>
             </View>
 
             <View style={styles.grid}>
-                {BRANCHES.map((branch) => (
+                {BATCHES.map((batchItem) => (
                     <TouchableOpacity
-                        key={branch.value}
+                        key={batchItem.value}
                         style={[styles.card, {
                             backgroundColor: t('#ffffff', '#181818'),
                             borderColor: t('rgba(0,0,0,0.04)', 'rgba(255,255,255,0.06)'),
                         }]}
-                        onPress={() => handleSelect(branch.value)}
+                        onPress={() => handleSelect(batchItem.value)}
                         activeOpacity={0.7}
                     >
-                        <View style={[styles.iconWrap, { backgroundColor: isDark ? `${branch.color}20` : branch.bg }]}>
+                        <View style={[styles.iconWrap, { backgroundColor: isDark ? `${batchItem.color}20` : batchItem.bg }]}>
                             <MaterialCommunityIcons
-                                name={branch.icon}
+                                name={batchItem.icon}
                                 size={24}
-                                color={branch.color}
+                                color={batchItem.color}
                             />
                         </View>
                         <Text style={[styles.cardLabel, { color: t('#1a1a2e', '#ffffff') }]}>
-                            {branch.label}
+                            {batchItem.label}
                         </Text>
                     </TouchableOpacity>
                 ))}

@@ -5,11 +5,12 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { supabase } from '../lib/supabase';
 import { getAttendance, saveAttendance, isSubmitted } from '../services/storage';
+import { getStudentBatch } from '../constants/batches';
 import { ThemeContext } from '../context/ThemeContext';
 import EmptyState from '../components/EmptyState';
 
 export default function AttendanceScreen() {
-    const { date, branch, subject } = useLocalSearchParams();
+    const { date, branch, subject, batch } = useLocalSearchParams();
     const router = useRouter();
     const netInfo = useNetInfo();
     const [students, setStudents] = useState([]);
@@ -39,7 +40,7 @@ export default function AttendanceScreen() {
     useFocusEffect(
         useCallback(() => {
             loadData();
-        }, [date, branch, subject])
+        }, [date, branch, subject, batch])
     );
 
     const loadData = async () => {
@@ -63,18 +64,23 @@ export default function AttendanceScreen() {
             const fetchedStudents = response.data;
 
             // Normalize to match old shape: { rollNo, name }
-            const normalizedStudents = (fetchedStudents || []).map(s => ({
+            let normalizedStudents = (fetchedStudents || []).map(s => ({
                 rollNo: s.roll_no,
                 name: s.name,
             }));
+
+            if (batch) {
+                normalizedStudents = normalizedStudents.filter(s => getStudentBatch(s.rollNo) === batch);
+            }
+
             setStudents(normalizedStudents);
 
             // Check if already submitted
-            const submitted = await isSubmitted(date, branch, subject);
+            const submitted = await isSubmitted(date, branch, subject, batch);
             setAlreadySubmitted(submitted);
 
             // Load existing attendance or default to all present
-            const savedAttendance = await getAttendance(date, branch, subject);
+            const savedAttendance = await getAttendance(date, branch, subject, batch);
             if (savedAttendance) {
                 setAttendance(savedAttendance);
             } else {
@@ -83,7 +89,7 @@ export default function AttendanceScreen() {
                     initialAttendance[s.rollNo] = true; // Default present
                 });
                 setAttendance(initialAttendance);
-                saveAttendance(date, branch, subject, initialAttendance);
+                saveAttendance(date, branch, subject, batch, initialAttendance);
             }
         } catch (error) {
             console.error('loadData error:', error);
@@ -97,15 +103,15 @@ export default function AttendanceScreen() {
         if (alreadySubmitted) return;
         setAttendance(prev => {
             const newAttendance = { ...prev, [rollNo]: status };
-            saveAttendance(date, branch, subject, newAttendance);
+            saveAttendance(date, branch, subject, batch, newAttendance);
             return newAttendance;
         });
-    }, [alreadySubmitted, date, branch, subject]);
+    }, [alreadySubmitted, date, branch, subject, batch]);
 
     const handleReview = () => {
         router.push({
             pathname: '/summary',
-            params: { date, branch, subject },
+            params: { date, branch, subject, batch },
         });
     };
 
@@ -135,8 +141,9 @@ export default function AttendanceScreen() {
     return (
         <View style={[styles.container, { backgroundColor: t('#f5f5f5', '#000000') }]}>
             <View style={[styles.header, { backgroundColor: t('white', '#1e1e1e'), borderBottomColor: t('#ddd', '#333'), borderBottomWidth: 1 }]}>
-                <Text variant="titleMedium" style={{ color: t('black', 'white'), fontWeight: 'bold' }}>{formatDate(date)}</Text>
-                <Text variant="bodyMedium" style={{ color: t('#666', '#aaa') }}>{subject} • {branch}</Text>
+                <Text variant="titleSmall" style={{ color: t('#666', '#aaa'), fontWeight: '700', textTransform: 'uppercase' }}>{formatDate(date)}</Text>
+                <Text variant="titleMedium" style={{ color: t('black', 'white'), fontWeight: '900' }} numberOfLines={1}>{subject}</Text>
+                <Text variant="bodySmall" style={{ color: t('#3d637e', '#b8dffe'), fontWeight: '800' }}>{branch}{batch ? ` • ${batch}` : ''}</Text>
             </View>
 
             {netInfo.isConnected === false && (
@@ -236,10 +243,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
         padding: 15,
         elevation: 2,
+        gap: 2,
     },
     banner: {
         backgroundColor: '#ffcc00',

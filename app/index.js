@@ -69,16 +69,40 @@ export default function HomeScreen() {
             }
 
             setProfile(profileData);
-            setSubjects(profileData?.subjects && profileData.subjects.length > 0
+            const rawSubjects = profileData?.subjects && profileData.subjects.length > 0
                 ? profileData.subjects
                 : [
-                    'M2', 'Chemistry', 'Engineering Mechanics', 'PPS', 
+                    'Mathematics 2', 'Chemistry', 'Engineering Mechanics', 'PPS', 
                     'Communication Skill', 'Workshop', 'Practical', 'NSS', 
                     'Skill Development', 'Institutional Innovation Council', 
                     'Sport Activity', 'Cultural Activity', 'Mentor Meeting', 
-                    'Industrial Connect', 'Tutorial', 'Remedial Lecture'
-                ]
-            );
+                    'Industrial Connect', 'Tutorial', 'Remedial Lecture',
+                    'PPS Lab', 'Communication Skill Lab', 'Workshop Lab', 'Engineering Mechanics Lab', 'Chemistry Lab'
+                ];
+            
+            const normalizeSubject = (s) => {
+                if (!s) return s;
+                const n = s.trim();
+                if (n.toUpperCase() === 'M2' || n === 'Mathematics 2') return 'Mathematics 2';
+                if (n.toLowerCase().includes('communication skill lab')) return 'Communication Skill Lab';
+                if (n.toLowerCase().includes('engineering mechanics lab') || n.toLowerCase().includes('mechanics lab (em)')) return 'Engineering Mechanics Lab';
+                if (n.toLowerCase().includes('pps lab')) return 'PPS Lab';
+                if (n.toLowerCase().includes('chemistry lab')) return 'Chemistry Lab';
+                if (n.toLowerCase().includes('workshop lab')) return 'Workshop Lab';
+                return n;
+            };
+
+            let finalSubjects = rawSubjects.map(normalizeSubject);
+            
+            // Force inject new practical subjects so existing users can see them
+            const requiredLabs = ['PPS Lab', 'Communication Skill Lab', 'Workshop Lab', 'Engineering Mechanics Lab', 'Chemistry Lab'];
+            requiredLabs.forEach(lab => {
+                if (!finalSubjects.includes(lab)) {
+                    finalSubjects.push(lab);
+                }
+            });
+
+            setSubjects(finalSubjects);
         } catch (err) {
             console.error("Teacher auth check failed:", err);
             await supabase.auth.signOut();

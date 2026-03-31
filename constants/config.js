@@ -4,7 +4,7 @@ export const GOOGLE_SCRIPT_URL = ''; // TODO: Add your deployed Google Script UR
 
 // Placeholder Google Drive links for subjects
 export const SUBJECT_RESOURCES = {
-    'M2': 'https://drive.google.com/drive/folders/placeholder_m2',
+    'Mathematics 2': 'https://drive.google.com/drive/folders/placeholder_m2',
     'Chemistry': 'https://drive.google.com/drive/folders/placeholder_chemistry',
     'Engineering Mechanics': 'https://drive.google.com/drive/folders/placeholder_em',
     'PPS': 'https://drive.google.com/drive/folders/placeholder_pps',
@@ -20,4 +20,9 @@ export const SUBJECT_RESOURCES = {
     'Industrial Connect': 'https://drive.google.com/drive/folders/placeholder_ic',
     'Tutorial': 'https://drive.google.com/drive/folders/placeholder_tutorial',
     'Remedial Lecture': 'https://drive.google.com/drive/folders/placeholder_remedial',
+    'PPS Lab': 'https://drive.google.com/drive/folders/placeholder_pps_lab',
+    'Communication Skill Lab': 'https://drive.google.com/drive/folders/placeholder_cs_lab',
+    'Workshop Lab': 'https://drive.google.com/drive/folders/placeholder_workshop_lab',
+    'Engineering Mechanics Lab': 'https://drive.google.com/drive/folders/placeholder_em_lab',
+    'Chemistry Lab': 'https://drive.google.com/drive/folders/placeholder_chemistry_lab',
 };

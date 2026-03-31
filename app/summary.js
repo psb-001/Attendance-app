@@ -7,12 +7,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getAttendance, markAsSubmitted, isSubmitted, resetSubmission } from '../services/storage';
 import { submitAttendance } from '../services/api';
 import { GOOGLE_SCRIPT_URL } from '../constants/config';
+import { getStudentBatch } from '../constants/batches';
 import { supabase } from '../lib/supabase';
 import { ThemeContext } from '../context/ThemeContext';
 import EmptyState from '../components/EmptyState';
 
 export default function SummaryScreen() {
-    const { date, branch, subject } = useLocalSearchParams();
+    const { date, branch, subject, batch } = useLocalSearchParams();
     const router = useRouter();
     const [stats, setStats] = useState(null);
     const [absentStudents, setAbsentStudents] = useState([]);
@@ -48,9 +49,9 @@ export default function SummaryScreen() {
 
     const loadData = async () => {
         try {
-            const fetchedAttendance = await getAttendance(date, branch, subject);
+            const fetchedAttendance = await getAttendance(date, branch, subject, batch);
             setAttendance(fetchedAttendance);
-            const submitted = await isSubmitted(date, branch, subject);
+            const submitted = await isSubmitted(date, branch, subject, batch);
             setAlreadySubmitted(submitted);
 
             // Fetch students from Supabase
@@ -62,10 +63,15 @@ export default function SummaryScreen() {
 
             if (error) throw error;
 
-            const studentList = (fetchedStudents || []).map(s => ({
+            let studentList = (fetchedStudents || []).map(s => ({
                 rollNo: s.roll_no,
                 name: s.name,
             }));
+            
+            if (batch) {
+                studentList = studentList.filter(s => getStudentBatch(s.rollNo) === batch);
+            }
+            
             setAllStudents(studentList);
 
             const total = studentList.length;
@@ -136,7 +142,7 @@ export default function SummaryScreen() {
                                     action: 'delete'
                                 });
                             }
-                            await resetSubmission(date, branch, subject);
+                            await resetSubmission(date, branch, subject, batch);
                             setAlreadySubmitted(false);
                             Alert.alert(
                                 'Reset Complete',
@@ -145,12 +151,12 @@ export default function SummaryScreen() {
                                     text: 'OK',
                                     onPress: () => router.push({
                                         pathname: '/attendance',
-                                        params: { date, branch, subject }
+                                        params: { date, branch, subject, batch }
                                     })
                                 }]
                             );
                         } catch (error) {
-                            await resetSubmission(date, branch, subject);
+                            await resetSubmission(date, branch, subject, batch);
                             setAlreadySubmitted(false);
                             Alert.alert(
                                 'Reset Complete',
@@ -159,7 +165,7 @@ export default function SummaryScreen() {
                                     text: 'OK',
                                     onPress: () => router.push({
                                         pathname: '/attendance',
-                                        params: { date, branch, subject }
+                                        params: { date, branch, subject, batch }
                                     })
                                 }]
                             );
@@ -195,7 +201,7 @@ export default function SummaryScreen() {
             if (supabaseError) throw supabaseError;
 
             // Mark as submitted locally
-            await markAsSubmitted(date, branch, subject);
+            await markAsSubmitted(date, branch, subject, batch);
             setAlreadySubmitted(true);
 
             // --- SECONDARY: Try Google Sheets (non-blocking) ---
@@ -245,13 +251,21 @@ export default function SummaryScreen() {
     return (
         <ScrollView style={[styles.container, { backgroundColor: t('#f5f5f5', '#000000') }]}>
             <Card style={[styles.card, { backgroundColor: t('white', '#1e1e1e') }]}>
-                <Card.Title 
-                    title="Attendance Summary" 
-                    subtitle={`${formatDate(date)} • ${branch}`} 
-                    titleStyle={{ color: t('black', 'white'), fontWeight: 'bold' }}
-                    subtitleStyle={{ color: t('#666', '#aaa') }}
-                />
-                <Card.Content>
+                <Card.Content style={{ paddingTop: 16 }}>
+                    <Text variant="headlineSmall" style={{ color: t('black', 'white'), fontWeight: '900', marginBottom: 4 }}>Summary</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                        <View style={{ backgroundColor: t('#f0f0f0', '#2a2d35'), paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: t('#666', '#bbb') }}>{formatDate(date)}</Text>
+                        </View>
+                        <View style={{ backgroundColor: t('#e3f2fd', '#1a2a36'), paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#3d637e' }}>{branch}</Text>
+                        </View>
+                        {batch && (
+                            <View style={{ backgroundColor: t('#e8f5e9', '#1b2e26'), paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#00b894' }}>{batch}</Text>
+                            </View>
+                        )}
+                    </View>
                     <View style={styles.statRow}>
                         <Text variant="bodyLarge" style={{ color: t('black', 'white') }}>Subject:</Text>
                         <Text variant="bodyLarge" style={[styles.bold, { color: t('black', 'white') }]}>{subject}</Text>
@@ -275,14 +289,14 @@ export default function SummaryScreen() {
                 </Card.Content>
             </Card>
 
-            <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }}>
+             <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }}>
                 <Card style={[styles.card, { backgroundColor: t('white', '#1e1e1e') }]}>
-                    <Card.Title 
-                        title="Absent Students" 
-                        subtitle={`${subject} - ${date} - Branch ${branch}`} 
-                        titleStyle={{ color: t('black', 'white') }}
-                        subtitleStyle={{ color: t('#666', '#aaa') }}
-                    />
+                    <Card.Content style={{ paddingTop: 16 }}>
+                        <Text variant="titleLarge" style={{ color: t('black', 'white'), fontWeight: '900', marginBottom: 2 }}>{subject}</Text>
+                        <Text variant="bodySmall" style={{ color: t('#666', '#aaa'), marginBottom: 12 }}>{formatDate(date)} • {branch}{batch ? ` • ${batch}` : ''}</Text>
+                        <Divider style={{ marginBottom: 12, backgroundColor: t('#eee', '#333') }} />
+                        <Text variant="titleMedium" style={{ color: '#f44336', fontWeight: '800', marginBottom: 8 }}>ABSENT STUDENTS</Text>
+                    </Card.Content>
                     <Card.Content>
                         {absentStudents.length === 0 ? (
                             <EmptyState 

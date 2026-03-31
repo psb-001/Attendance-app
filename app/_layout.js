@@ -141,7 +141,7 @@ function RootLayoutNav() {
             }
         } else {
             // Teacher / Admin
-            const allowedTeacherRoutes = ['index', 'profile', 'branch', 'attendance', 'summary', undefined];
+            const allowedTeacherRoutes = ['index', 'profile', 'branch', 'batch', 'attendance', 'summary', undefined];
             if (!allowedTeacherRoutes.includes(currentRoute)) {
                 console.log("Layout Guard: Teacher on unauthorized route. Redirecting to /");
                 router.replace('/');
@@ -179,6 +179,7 @@ function RootLayoutNav() {
                     <Stack.Screen name="student-dashboard" options={{ headerShown: false }} />
                     <Stack.Screen name="profile" options={{ headerShown: false }} />
                     <Stack.Screen name="branch" options={{ title: 'Select Details' }} />
+                    <Stack.Screen name="batch" options={{ title: 'Select Batch' }} />
                     <Stack.Screen name="attendance" options={{ title: 'Mark Attendance' }} />
                     <Stack.Screen name="summary" options={{ title: 'Summary' }} />
                 </Stack>
