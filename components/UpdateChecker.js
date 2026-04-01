@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import * as Updates from 'expo-updates';
 import { View, StyleSheet, Modal, Animated, Easing } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
-import { BlurView } from 'expo-blur';
 
 export default function UpdateChecker() {
     const [checking, setChecking] = useState(false);
