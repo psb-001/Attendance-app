@@ -76,7 +76,10 @@ function RootLayoutNav() {
     const segments = useSegments();
     const [session, setSession] = useState(null);
     const [role, setRole] = useState(null);
-    const [authReady, setAuthReady] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     useEffect(() => {
         // 1. Initial sense of session
@@ -103,16 +106,23 @@ function RootLayoutNav() {
         }
 
         const fetchRole = async () => {
-            console.log("Layout: Fetching role for:", session.user.id);
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', session.user.id)
-                .maybeSingle();
-            
-            console.log("Layout: Profile role:", profile?.role || "Null");
-            setRole(profile?.role || 'student'); // fallback to student
-            setAuthReady(true);
+            try {
+                console.log("Layout: Fetching role for:", session.user.id);
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', session.user.id)
+                    .maybeSingle();
+                
+                if (error) throw error;
+                console.log("Layout: Profile role:", profile?.role || "Null");
+                setRole(profile?.role || 'student'); // fallback to student
+            } catch (err) {
+                console.error("Layout: Error fetching role:", err.message);
+                setRole('student'); // safe default
+            } finally {
+                setAuthReady(true);
+            }
         };
 
         fetchRole();
@@ -120,10 +130,11 @@ function RootLayoutNav() {
 
     // Role-based routing guard
     useEffect(() => {
-        if (!authReady) return;
+        if (!authReady || !isMounted) return;
 
         const currentRoute = segments[0];
-        console.log("Layout: Checking route guard. Current:", currentRoute, "Role:", role, "Session:", session?.user?.id ? "Exists" : "Null");
+        const isIndex = !currentRoute || currentRoute === 'index';
+        console.log("Layout: Checking route guard. Current:", currentRoute, "Role:", role);
 
         if (!session) {
             if (currentRoute !== 'login') {
@@ -133,6 +144,14 @@ function RootLayoutNav() {
             return;
         }
 
+        // If logged in and on login page, send home
+        if (currentRoute === 'login') {
+            if (role === 'student') router.replace('/student-dashboard');
+            else router.replace('/');
+            return;
+        }
+
+        // Role-specific guards
         if (role === 'student') {
             const allowedStudentRoutes = ['student-dashboard', 'profile'];
             if (!allowedStudentRoutes.includes(currentRoute)) {
@@ -147,7 +166,7 @@ function RootLayoutNav() {
                 router.replace('/');
             }
         }
-    }, [session, role, authReady, segments]);
+    }, [session, role, authReady, segments, isMounted]);
 
     // Show spinner while waiting for AsyncStorage to restore session
     if (!authReady) {
