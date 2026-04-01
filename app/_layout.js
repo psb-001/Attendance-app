@@ -76,6 +76,7 @@ function RootLayoutNav() {
     const segments = useSegments();
     const [session, setSession] = useState(null);
     const [role, setRole] = useState(null);
+    const [authReady, setAuthReady] = useState(false);
     useEffect(() => {
         // 1. Initial sense of session
         supabase.auth.getSession().then(({ data: { session } }) => {
