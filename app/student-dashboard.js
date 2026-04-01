@@ -78,8 +78,16 @@ export default function StudentDashboard() {
                 full_name: profileData.full_name || profileData.name
             } : {
                 email: session.user.email,
-                full_name: session.user.user_metadata?.full_name || 'Academic Student'
+                full_name: session.user.user_metadata?.full_name || 'Academic Student',
+                role: 'student' // fallback
             };
+
+            // Safety check: If a teacher lands here, send them to their dashboard
+            if (currentProfile.role === 'teacher') {
+                console.log("Student Dashboard: User is a teacher, redirecting...");
+                router.replace('/');
+                return;
+            }
 
             setProfile(currentProfile);
 

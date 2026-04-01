@@ -76,17 +76,12 @@ function RootLayoutNav() {
     const segments = useSegments();
     const [session, setSession] = useState(null);
     const [role, setRole] = useState(null);
-    const [isMounted, setIsMounted] = useState(false);
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
-
     useEffect(() => {
         // 1. Initial sense of session
         supabase.auth.getSession().then(({ data: { session } }) => {
             console.log("Layout: Initial session fetch:", session?.user?.id || "Null");
             setSession(session);
-            if (!session) setAuthReady(true);
+            setAuthReady(true);
         });
 
         // 2. Listen for auth changes
@@ -97,76 +92,6 @@ function RootLayoutNav() {
 
         return () => subscription.unsubscribe();
     }, []);
-
-    // Fetch role when session changes
-    useEffect(() => {
-        if (!session) {
-            setRole(null);
-            return;
-        }
-
-        const fetchRole = async () => {
-            try {
-                console.log("Layout: Fetching role for:", session.user.id);
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', session.user.id)
-                    .maybeSingle();
-                
-                if (error) throw error;
-                console.log("Layout: Profile role:", profile?.role || "Null");
-                setRole(profile?.role || 'student'); // fallback to student
-            } catch (err) {
-                console.error("Layout: Error fetching role:", err.message);
-                setRole('student'); // safe default
-            } finally {
-                setAuthReady(true);
-            }
-        };
-
-        fetchRole();
-    }, [session]);
-
-    // Role-based routing guard
-    useEffect(() => {
-        if (!authReady || !isMounted) return;
-
-        const currentRoute = segments[0];
-        const isIndex = !currentRoute || currentRoute === 'index';
-        console.log("Layout: Checking route guard. Current:", currentRoute, "Role:", role);
-
-        if (!session) {
-            if (currentRoute !== 'login') {
-                console.log("Layout Guard: Not logged in. Redirecting to /login");
-                router.replace('/login');
-            }
-            return;
-        }
-
-        // If logged in and on login page, send home
-        if (currentRoute === 'login') {
-            if (role === 'student') router.replace('/student-dashboard');
-            else router.replace('/');
-            return;
-        }
-
-        // Role-specific guards
-        if (role === 'student') {
-            const allowedStudentRoutes = ['student-dashboard', 'profile'];
-            if (!allowedStudentRoutes.includes(currentRoute)) {
-                console.log("Layout Guard: Student on unauthorized route. Redirecting to /student-dashboard");
-                router.replace('/student-dashboard');
-            }
-        } else {
-            // Teacher / Admin
-            const allowedTeacherRoutes = ['index', 'profile', 'branch', 'batch', 'attendance', 'summary', undefined];
-            if (!allowedTeacherRoutes.includes(currentRoute)) {
-                console.log("Layout Guard: Teacher on unauthorized route. Redirecting to /");
-                router.replace('/');
-            }
-        }
-    }, [session, role, authReady, segments, isMounted]);
 
     // Show spinner while waiting for AsyncStorage to restore session
     if (!authReady) {
@@ -182,7 +107,7 @@ function RootLayoutNav() {
             <View style={{ flex: 1, backgroundColor: activeTheme.colors.background }}>
                 <View style={{ flex: 1, width: '100%', maxWidth: Platform.OS === 'web' ? 500 : '100%', alignSelf: 'center', overflow: 'hidden' }}>
                     <PaperProvider theme={activeTheme}>
-                        <UpdateChecker />
+                        {/* <UpdateChecker /> */}
                         <Stack
                             screenOptions={{
                                 headerStyle: {

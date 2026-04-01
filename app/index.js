@@ -80,8 +80,16 @@ export default function HomeScreen() {
                 full_name: profileData.full_name || profileData.name
             } : {
                 email: session.user.email,
-                full_name: session.user.user_metadata?.full_name || 'Faculty Member'
+                full_name: session.user.user_metadata?.full_name || 'Faculty Member',
+                role: 'teacher' // fallback
             };
+
+            // Safety check: If a student lands here, send them to their dashboard
+            if (profile.role === 'student') {
+                console.log("Teacher Dashboard: User is a student, redirecting...");
+                router.replace('/student-dashboard');
+                return;
+            }
 
             setProfile(profile);
 
