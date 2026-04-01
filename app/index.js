@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef, useContext } from 'react';
 import { View, StyleSheet, ScrollView, Image, ActivityIndicator, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
-import { Text, Surface, IconButton, FAB } from 'react-native-paper';
+import { Text, Surface, IconButton, FAB, Portal, Modal, TextInput, Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -10,8 +10,10 @@ import AppSidebar from '../components/AppSidebar';
 import InfoSections from '../components/InfoSections';
 import ProfileTab from '../components/ProfileTab';
 import CalendarStrip from '../components/CalendarStrip';
-import AppHeader from '../components/AppHeader';
+import TeacherReportsTab from '../components/TeacherReportsTab';
+import TeacherSubjectsTab from '../components/TeacherSubjectsTab';
 import { generateMonthDays, getInitials } from '../utils/dashboardHelpers';
+import AppHeader from '../components/AppHeader';
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -24,6 +26,10 @@ export default function HomeScreen() {
     const [selectedDate, setSelectedDate] = useState(new Date().getDate().toString());
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [isFabModalVisible, setIsFabModalVisible] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+
     const { isDark, toggleTheme } = useContext(ThemeContext);
     const monthDays = useMemo(() => generateMonthDays(calendarDate), [calendarDate.getMonth(), calendarDate.getFullYear()]);
     const flatListRef = useRef(null);
@@ -62,46 +68,79 @@ export default function HomeScreen() {
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
-                .single();
+                .maybeSingle();
 
             if (profileError) {
                 console.error("Error fetching teacher profile:", profileError.message);
             }
 
-            setProfile(profileData);
-            const rawSubjects = profileData?.subjects && profileData.subjects.length > 0
-                ? profileData.subjects
-                : [
-                    'Mathematics 2', 'Chemistry', 'Engineering Mechanics', 'PPS', 
-                    'Communication Skill', 'Workshop', 'Practical', 'NSS', 
-                    'Skill Development', 'Institutional Innovation Council', 
-                    'Sport Activity', 'Cultural Activity', 'Mentor Meeting', 
-                    'Industrial Connect', 'Tutorial', 'Remedial Lecture',
-                    'PPS Lab', 'Communication Skill Lab', 'Workshop Lab', 'Engineering Mechanics Lab', 'Chemistry Lab'
-                ];
-            
-            const normalizeSubject = (s) => {
-                if (!s) return s;
-                const n = s.trim();
-                if (n.toUpperCase() === 'M2' || n === 'Mathematics 2') return 'Mathematics 2';
-                if (n.toLowerCase().includes('communication skill lab')) return 'Communication Skill Lab';
-                if (n.toLowerCase().includes('engineering mechanics lab') || n.toLowerCase().includes('mechanics lab (em)')) return 'Engineering Mechanics Lab';
-                if (n.toLowerCase().includes('pps lab')) return 'PPS Lab';
-                if (n.toLowerCase().includes('chemistry lab')) return 'Chemistry Lab';
-                if (n.toLowerCase().includes('workshop lab')) return 'Workshop Lab';
-                return n;
+            const profile = profileData ? {
+                ...profileData,
+                email: profileData.email || session.user.email,
+                full_name: profileData.full_name || profileData.name
+            } : {
+                email: session.user.email,
+                full_name: session.user.user_metadata?.full_name || 'Faculty Member'
             };
 
-            let finalSubjects = rawSubjects.map(normalizeSubject);
+            setProfile(profile);
+
+            // Define the 11 "Actual" base subjects
+            const baseSubjects = [
+                { name: 'Engineering mechanics', type: 'THEORY' },
+                { name: 'Communication skills', type: 'THEORY' },
+                { name: 'Chemistry', type: 'THEORY' },
+                { name: 'Mathematical 2', type: 'THEORY' },
+                { name: 'PPS', type: 'THEORY' },
+                { name: 'Engineering mechanics lab', type: 'PRACTICAL' },
+                { name: 'Communication skills lab', type: 'PRACTICAL' },
+                { name: 'Chemistry lab', type: 'PRACTICAL' },
+                { name: 'Mathematical 2 lab', type: 'PRACTICAL' },
+                { name: 'PPS lab', type: 'PRACTICAL' },
+                { name: 'workshop lab', type: 'PRACTICAL' }
+            ];
+
+            // Fetch all subjects from the global subjects table
+            const { data: dbSubjects, error: dbSubjectsError } = await supabase
+                .from('subjects')
+                .select('*')
+                .order('name');
             
-            // Force inject new practical subjects so existing users can see them
-            const requiredLabs = ['PPS Lab', 'Communication Skill Lab', 'Workshop Lab', 'Engineering Mechanics Lab', 'Chemistry Lab'];
-            requiredLabs.forEach(lab => {
-                if (!finalSubjects.includes(lab)) {
-                    finalSubjects.push(lab);
-                }
+            if (dbSubjectsError) {
+                console.warn("Supabase fetch failed, using internal fallback:", dbSubjectsError.message);
+            }
+
+            const safeDbSubjects = dbSubjects || [];
+            
+            // Merge base subjects with DB subjects to get IDs if they exist
+            let finalSubjects = baseSubjects.map(base => {
+                const dbMatch = safeDbSubjects.find(s => s.name === base.name);
+                return dbMatch ? { ...base, ...dbMatch } : base;
             });
 
+            // If teacher has specific subjects assigned, filter the list
+            const assignedSubjects = profileData?.subjects || [];
+            if (assignedSubjects.length > 0) {
+                // Map old/short codes to the new full names for filtering
+                const nameNormalization = (n) => {
+                    if (!n) return '';
+                    const low = n.toLowerCase();
+                    if (low === 'm2') return 'Mathematical 2';
+                    if (low === 'em') return 'Engineering mechanics';
+                    if (low === 'cs') return 'Communication skills';
+                    if (low === 'workshop') return 'workshop lab';
+                    return n;
+                };
+
+                const normalizedAssignments = assignedSubjects.map(nameNormalization);
+                finalSubjects = finalSubjects.filter(s => normalizedAssignments.includes(s.name));
+            }
+
+            // Safety: if filtering leaves nothing, show all 11
+            if (finalSubjects.length === 0) finalSubjects = baseSubjects;
+            
+            setSubjects(finalSubjects);
+            
             setSubjects(finalSubjects);
         } catch (err) {
             console.error("Teacher auth check failed:", err);
@@ -155,14 +194,13 @@ export default function HomeScreen() {
 
     return (
         <View style={[styles.root, { backgroundColor: t('#f9f9fe', '#000000') }]}>
-            <AppHeader
+            <AppHeader 
                 activeTab={activeTab}
                 profile={profile}
                 onOpenMenu={() => setIsSidebarOpen(true)}
                 onAvatarPress={() => setActiveTab('profile')}
                 roleTitle="TEACHER DASHBOARD"
             />
-
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
                 {activeTab === 'home' && (
                     <>
@@ -199,7 +237,7 @@ export default function HomeScreen() {
                     {subjects.length > 0 ? subjects.map((sub, index) => (
                         <SubjectCard 
                             key={index}
-                            subject={sub}
+                            subject={sub.name}
                             isDark={isDark}
                             onAttendance={handleAttendance}
                         />
@@ -216,13 +254,21 @@ export default function HomeScreen() {
                     </>
                 )}
 
+                {activeTab === 'subjects' && (
+                    <TeacherSubjectsTab profile={profile} />
+                )}
+
+                {activeTab === 'reports' && (
+                    <TeacherReportsTab profile={profile} />
+                )}
+
                 <InfoSections activeTab={activeTab} />
 
                 {activeTab === 'profile' && (
                     <ProfileTab
                         profile={profile}
                         onLogout={() => { supabase.auth.signOut(); router.replace('/login'); }}
-                        roleLabel="Faculty Member"
+                        roleLabel={profile?.role || "Faculty Member"}
                     />
                 )}
 
@@ -239,25 +285,63 @@ export default function HomeScreen() {
                 fallbackName="Faculty Member"
             />
 
-            <FAB
-                icon="plus"
-                style={styles.fab}
-                onPress={() => {}}
-                color="white"
-            />
+            <Portal>
+                <Modal visible={isFabModalVisible} onDismiss={() => setIsFabModalVisible(false)} contentContainerStyle={{ padding: 24, margin: 24, backgroundColor: t('white', '#1e1e1e'), borderRadius: 16 }}>
+                    <Text variant="titleLarge" style={{ marginBottom: 8, color: t('black', 'white'), fontWeight: 'bold' }}>Start Custom Class</Text>
+                    <Text style={{ marginBottom: 20, color: t('#666', '#aaa') }}>Enter a new subject name to take attendance for a non-scheduled or ad-hoc class.</Text>
+                    
+                    <TextInput
+                        mode="outlined"
+                        label="Subject Name"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        style={{ marginBottom: 24, backgroundColor: t('#ffffff', '#1e1e1e') }}
+                        outlineColor={t('#e2e8f0', '#333')}
+                        activeOutlineColor="#3d637e"
+                        textColor={t('black', 'white')}
+                        autoFocus
+                    />
+                    
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+                        <Button mode="text" onPress={() => setIsFabModalVisible(false)} textColor={t('#64748b', '#94a3b8')}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            mode="contained" 
+                            disabled={searchQuery.trim().length === 0}
+                            onPress={() => { setIsFabModalVisible(false); handleAttendance(searchQuery.trim()); setSearchQuery(''); }} 
+                            buttonColor="#3d637e"
+                            style={{ borderRadius: 8 }}
+                        >
+                            Start Class
+                        </Button>
+                    </View>
+                </Modal>
+            </Portal>
+
+            {activeTab === 'home' && (
+                <FAB
+                    icon="plus"
+                    label="New Class"
+                    style={styles.fab}
+                    onPress={() => setIsFabModalVisible(true)}
+                    color="white"
+                    customSize={56}
+                />
+            )}
 
             <Surface style={[styles.bottomNav, { backgroundColor: t('#ffffff', '#1e1e1e') }]} elevation={4}>
                 <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('home')}>
                     <MaterialCommunityIcons name="view-grid" size={28} color={activeTab === 'home' ? "#3d637e" : t('#9c9da1', '#aeafb4')} />
                     <Text style={activeTab === 'home' ? styles.navLabelActive : [styles.navLabel, { color: t('#9c9da1', '#aeafb4') }]}>DASHBOARD</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <MaterialCommunityIcons name="book-outline" size={28} color={t('#9c9da1', '#aeafb4')} />
-                    <Text style={[styles.navLabel, { color: t('#9c9da1', '#aeafb4') }]}>SUBJECTS</Text>
+                <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('subjects')}>
+                    <MaterialCommunityIcons name="book-outline" size={28} color={activeTab === 'subjects' ? "#3d637e" : t('#9c9da1', '#aeafb4')} />
+                    <Text style={activeTab === 'subjects' ? styles.navLabelActive : [styles.navLabel, { color: t('#9c9da1', '#aeafb4') }]}>SUBJECTS</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <MaterialCommunityIcons name="chart-bar" size={28} color={t('#9c9da1', '#aeafb4')} />
-                    <Text style={[styles.navLabel, { color: t('#9c9da1', '#aeafb4') }]}>REPORTS</Text>
+                <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('reports')}>
+                    <MaterialCommunityIcons name="chart-bar" size={28} color={activeTab === 'reports' ? "#3d637e" : t('#9c9da1', '#aeafb4')} />
+                    <Text style={activeTab === 'reports' ? styles.navLabelActive : [styles.navLabel, { color: t('#9c9da1', '#aeafb4') }]}>REPORTS</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab('profile')}>
                     <MaterialCommunityIcons name="account-outline" size={28} color={activeTab === 'profile' ? "#3d637e" : t('#9c9da1', '#aeafb4')} />
@@ -316,7 +400,7 @@ const styles = StyleSheet.create({
         right: 16,
         bottom: 100,
         backgroundColor: '#3d637e',
-        borderRadius: 16,
+        borderRadius: 20,
     },
     bottomNav: {
         position: 'absolute',

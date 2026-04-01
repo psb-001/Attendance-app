@@ -79,7 +79,9 @@ export default function SummaryScreen() {
             const absentList = [];
 
             studentList.forEach(s => {
-                if (fetchedAttendance && fetchedAttendance[s.rollNo]) {
+                // If student is not in the record OR they are explicitly marked true, they are present.
+                // They are only absent if strictly marked as FALSE.
+                if (!fetchedAttendance || fetchedAttendance[s.rollNo] !== false) {
                     presentCount++;
                 } else {
                     absentList.push(s);

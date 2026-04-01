@@ -4,7 +4,7 @@ import { useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_600SemiBold, Plus
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useContext } from 'react';
-import { View, ActivityIndicator, useColorScheme } from 'react-native';
+import { View, ActivityIndicator, useColorScheme, Platform } from 'react-native';
 import UpdateChecker from '../components/UpdateChecker';
 import { supabase } from '../lib/supabase';
 import { ThemeProvider, ThemeContext } from '../context/ThemeContext';
@@ -108,10 +108,10 @@ function RootLayoutNav() {
                 .from('profiles')
                 .select('role')
                 .eq('id', session.user.id)
-                .single();
+                .maybeSingle();
             
             console.log("Layout: Profile role:", profile?.role || "Null");
-            setRole(profile?.role || 'teacher'); // fallback to teacher
+            setRole(profile?.role || 'student'); // fallback to student
             setAuthReady(true);
         };
 
@@ -160,31 +160,35 @@ function RootLayoutNav() {
 
     return (
         <SafeAreaProvider>
-            <PaperProvider theme={activeTheme}>
-                <UpdateChecker />
-                <Stack
-                    screenOptions={{
-                        headerStyle: {
-                            backgroundColor: activeTheme.colors.primary,
-                        },
-                        headerTintColor: '#fff',
-                        headerTitleStyle: {
-                            fontWeight: 'bold',
-                        },
-                        headerTitleAlign: 'center',
-                    }}
-                >
-                    <Stack.Screen name="index" options={{ headerShown: false }} />
-                    <Stack.Screen name="login" options={{ headerShown: false }} />
-                    <Stack.Screen name="student-dashboard" options={{ headerShown: false }} />
-                    <Stack.Screen name="profile" options={{ headerShown: false }} />
-                    <Stack.Screen name="branch" options={{ title: 'Select Details' }} />
-                    <Stack.Screen name="batch" options={{ title: 'Select Batch' }} />
-                    <Stack.Screen name="attendance" options={{ title: 'Mark Attendance' }} />
-                    <Stack.Screen name="summary" options={{ title: 'Summary' }} />
-                </Stack>
-                <StatusBar style={isDark ? "light" : "dark"} />
-            </PaperProvider>
+            <View style={{ flex: 1, backgroundColor: activeTheme.colors.background }}>
+                <View style={{ flex: 1, width: '100%', maxWidth: Platform.OS === 'web' ? 500 : '100%', alignSelf: 'center', overflow: 'hidden' }}>
+                    <PaperProvider theme={activeTheme}>
+                        <UpdateChecker />
+                        <Stack
+                            screenOptions={{
+                                headerStyle: {
+                                    backgroundColor: activeTheme.colors.primary,
+                                },
+                                headerTintColor: '#fff',
+                                headerTitleStyle: {
+                                    fontWeight: 'bold',
+                                },
+                                headerTitleAlign: 'center',
+                            }}
+                        >
+                            <Stack.Screen name="index" options={{ headerShown: false }} />
+                            <Stack.Screen name="login" options={{ headerShown: false }} />
+                            <Stack.Screen name="student-dashboard" options={{ headerShown: false }} />
+                            <Stack.Screen name="profile" options={{ headerShown: false }} />
+                            <Stack.Screen name="branch" options={{ headerShown: false }} />
+                            <Stack.Screen name="batch" options={{ headerShown: false }} />
+                            <Stack.Screen name="attendance" options={{ headerShown: false }} />
+                            <Stack.Screen name="summary" options={{ title: 'Summary' }} />
+                        </Stack>
+                        <StatusBar style={isDark ? "light" : "dark"} />
+                    </PaperProvider>
+                </View>
+            </View>
         </SafeAreaProvider>
     );
 }

@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemeContext } from '../context/ThemeContext';
 
-const { width } = Dimensions.get('window');
 const CARD_GAP = 16;
-const CARD_WIDTH = (width - 48 - CARD_GAP) / 2;
+const SCREEN_PADDING = 24;
 
 const BATCHES = [
     { value: 'B1', label: 'Batch B1', icon: 'account-group', color: '#0984E3', bg: '#E3F2FD' },
@@ -18,11 +17,16 @@ const BATCHES = [
 
 export default function BatchScreen() {
     const router = useRouter();
+    const { width: windowWidth } = useWindowDimensions();
     const { subject, date, branch } = useLocalSearchParams();
     const [authChecked, setAuthChecked] = useState(false);
     const { isDark } = useContext(ThemeContext);
 
     const t = (light, dark) => isDark ? dark : light;
+
+    // Responsive Logic
+    const contentWidth = Math.min(windowWidth - (SCREEN_PADDING * 2), 652); // Keep it compact for 2 columns
+    const cardWidth = (contentWidth - CARD_GAP) / 2;
 
     const formatDate = (dateStr) => {
         if (!dateStr) return 'Today';
@@ -74,38 +78,47 @@ export default function BatchScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: t('#f9f9fe', '#000000') }]}>
-            <View style={styles.headerSection}>
-                <Text style={[styles.headerTitle, { color: t('#2f333a', '#ffffff') }]}>
-                    Select Batch
-                </Text>
-                <Text style={[styles.headerSub, { color: t('#91939c', '#aeafb4') }]}>
-                    {subject} • {branch} • {formatDate(date)}
-                </Text>
-            </View>
-
-            <View style={styles.grid}>
-                {BATCHES.map((batchItem) => (
-                    <TouchableOpacity
-                        key={batchItem.value}
-                        style={[styles.card, {
-                            backgroundColor: t('#ffffff', '#181818'),
-                            borderColor: t('rgba(0,0,0,0.04)', 'rgba(255,255,255,0.06)'),
-                        }]}
-                        onPress={() => handleSelect(batchItem.value)}
-                        activeOpacity={0.7}
-                    >
-                        <View style={[styles.iconWrap, { backgroundColor: isDark ? `${batchItem.color}20` : batchItem.bg }]}>
-                            <MaterialCommunityIcons
-                                name={batchItem.icon}
-                                size={24}
-                                color={batchItem.color}
-                            />
-                        </View>
-                        <Text style={[styles.cardLabel, { color: t('#1a1a2e', '#ffffff') }]}>
-                            {batchItem.label}
-                        </Text>
+            <View style={[styles.mainContent, { alignSelf: 'center', width: '100%', maxWidth: 700 }]}>
+                <View style={styles.topNav}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <MaterialCommunityIcons name="arrow-left" size={28} color={t('#2f333a', '#ffffff')} />
                     </TouchableOpacity>
-                ))}
+                </View>
+
+                <View style={styles.headerSection}>
+                    <Text variant="headlineMedium" style={[styles.headerTitle, { color: t('#2f333a', '#ffffff') }]}>
+                        Select Batch
+                    </Text>
+                    <Text style={[styles.headerSub, { color: t('#91939c', '#aeafb4') }]}>
+                        {subject} • {branch} • {formatDate(date)}
+                    </Text>
+                </View>
+
+                <View style={styles.grid}>
+                    {BATCHES.map((batchItem) => (
+                        <TouchableOpacity
+                            key={batchItem.value}
+                            style={[styles.card, {
+                                width: cardWidth,
+                                backgroundColor: t('#ffffff', '#121212'),
+                                borderColor: t('rgba(174, 178, 187, 0.12)', 'rgba(255, 255, 255, 0.08)'),
+                            }]}
+                            onPress={() => handleSelect(batchItem.value)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={[styles.iconWrap, { backgroundColor: isDark ? `${batchItem.color}25` : batchItem.bg }]}>
+                                <MaterialCommunityIcons
+                                    name={batchItem.icon}
+                                    size={32}
+                                    color={batchItem.color}
+                                />
+                            </View>
+                            <Text style={[styles.cardLabel, { color: t('#1a1a2e', '#ffffff') }]}>
+                                {batchItem.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
             </View>
         </View>
     );
@@ -114,7 +127,21 @@ export default function BatchScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingHorizontal: 24,
+    },
+    mainContent: {
+        flex: 1,
+    },
+    topNav: {
+        paddingHorizontal: SCREEN_PADDING,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingBottom: 20,
+    },
+    backButton: {
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     loadingContainer: {
         flex: 1,
@@ -122,42 +149,52 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerSection: {
-        marginTop: 20,
+        paddingHorizontal: SCREEN_PADDING,
         marginBottom: 32,
     },
     headerTitle: {
-        fontSize: 28,
         fontWeight: '900',
-        letterSpacing: -1,
+        letterSpacing: -1.5,
     },
     headerSub: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginTop: 4,
+        fontSize: 15,
+        fontWeight: '700',
+        marginTop: 6,
+        letterSpacing: -0.2,
     },
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: CARD_GAP,
+        paddingHorizontal: SCREEN_PADDING,
     },
     card: {
-        width: CARD_WIDTH,
-        height: CARD_WIDTH * 0.85,
-        borderRadius: 20,
+        aspectRatio: 1,
+        borderRadius: 32,
         padding: 20,
-        borderWidth: 1,
-        justifyContent: 'space-between',
-    },
-    iconWrap: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
+        borderWidth: 1.5,
         justifyContent: 'center',
         alignItems: 'center',
+        // Premium Shadow
+        shadowColor: '#3d637e',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 15,
+        elevation: 6,
+    },
+    iconWrap: {
+        width: 64,
+        height: 64,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
     },
     cardLabel: {
-        fontSize: 16,
-        fontWeight: '800',
-        letterSpacing: -0.3,
+        fontSize: 14,
+        fontWeight: '900',
+        letterSpacing: -0.5,
+        textAlign: 'center',
+        lineHeight: 18,
     },
 });

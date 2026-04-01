@@ -4,27 +4,17 @@ import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const SUBJECT_META = {
-    'Mathematics 2': { icon: 'calculator-variant', category: 'THEORY', accent: '#6C5CE7' },
+    'Mathematical 2': { icon: 'calculator-variant', category: 'THEORY', accent: '#6C5CE7' },
     'Chemistry': { icon: 'flask-outline', category: 'THEORY', accent: '#00B894' },
-    'Engineering Mechanics': { icon: 'cog-outline', category: 'THEORY', accent: '#E17055' },
+    'Engineering mechanics': { icon: 'cog-outline', category: 'THEORY', accent: '#E17055' },
     'PPS': { icon: 'code-tags', category: 'THEORY', accent: '#0984E3' },
-    'Communication Skill': { icon: 'microphone-outline', category: 'THEORY', accent: '#FDCB6E' },
-    'Workshop': { icon: 'hammer-wrench', category: 'PRACTICAL', accent: '#E84393' },
-    'Practical': { icon: 'test-tube', category: 'PRACTICAL', accent: '#00CEC9' },
-    'NSS': { icon: 'account-group-outline', category: '', accent: '#A29BFE' },
-    'Skill Development': { icon: 'lightbulb-on-outline', category: '', accent: '#FD79A8' },
-    'Institutional Innovation Council': { icon: 'rocket-launch-outline', category: '', accent: '#55EFC4' },
-    'Sport Activity': { icon: 'basketball', category: '', accent: '#FF7675' },
-    'Cultural Activity': { icon: 'music-note', category: '', accent: '#DFE6E9' },
-    'Mentor Meeting': { icon: 'account-tie', category: '', accent: '#74B9FF' },
-    'Industrial Connect': { icon: 'factory', category: '', accent: '#B2BEC3' },
-    'Tutorial': { icon: 'school-outline', category: 'THEORY', accent: '#636E72' },
-    'Remedial Lecture': { icon: 'book-education-outline', category: 'THEORY', accent: '#FFEAA7' },
-    'PPS Lab': { icon: 'code-tags-check', category: 'PRACTICAL', accent: '#0984E3' },
-    'Communication Skill Lab': { icon: 'microphone-variant', category: 'PRACTICAL', accent: '#FDCB6E' },
-    'Workshop Lab': { icon: 'hammer-wrench', category: 'PRACTICAL', accent: '#E84393' },
-    'Engineering Mechanics Lab': { icon: 'cog-outline', category: 'PRACTICAL', accent: '#E17055' },
-    'Chemistry Lab': { icon: 'flask', category: 'PRACTICAL', accent: '#00B894' },
+    'Communication skills': { icon: 'microphone-outline', category: 'THEORY', accent: '#FDCB6E' },
+    'Engineering mechanics lab': { icon: 'cog-outline', category: 'PRACTICAL', accent: '#E17055' },
+    'Communication skills lab': { icon: 'microphone-variant', category: 'PRACTICAL', accent: '#FDCB6E' },
+    'Chemistry lab': { icon: 'flask', category: 'PRACTICAL', accent: '#00B894' },
+    'Mathematical 2 lab': { icon: 'calculator-variant', category: 'PRACTICAL', accent: '#6C5CE7' },
+    'PPS lab': { icon: 'code-tags-check', category: 'PRACTICAL', accent: '#0984E3' },
+    'workshop lab': { icon: 'hammer-wrench', category: 'PRACTICAL', accent: '#E84393' },
 };
 
 const SubjectCard = ({ subject, onAttendance, isDark = false }) => {

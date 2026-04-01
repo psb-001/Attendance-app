@@ -5,22 +5,17 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SUBJECT_RESOURCES } from '../constants/config';
 
 const SUBJECT_META = {
-    'M2': { icon: 'calculator-variant', category: 'THEORY', accent: '#6C5CE7' },
+    'Mathematical 2': { icon: 'calculator-variant', category: 'THEORY', accent: '#6C5CE7' },
     'Chemistry': { icon: 'flask-outline', category: 'THEORY', accent: '#00B894' },
-    'Engineering Mechanics': { icon: 'cog-outline', category: 'THEORY', accent: '#E17055' },
+    'Engineering mechanics': { icon: 'cog-outline', category: 'THEORY', accent: '#E17055' },
     'PPS': { icon: 'code-tags', category: 'THEORY', accent: '#0984E3' },
-    'Communication Skill': { icon: 'microphone-outline', category: 'THEORY', accent: '#FDCB6E' },
-    'Workshop': { icon: 'hammer-wrench', category: 'LAB', accent: '#E84393' },
-    'Practical': { icon: 'test-tube', category: 'LAB', accent: '#00CEC9' },
-    'NSS': { icon: 'account-group-outline', category: 'ACTIVITY', accent: '#A29BFE' },
-    'Skill Development': { icon: 'lightbulb-on-outline', category: 'ELECTIVE', accent: '#FD79A8' },
-    'Institutional Innovation Council': { icon: 'rocket-launch-outline', category: 'ACTIVITY', accent: '#55EFC4' },
-    'Sport Activity': { icon: 'basketball', category: 'ACTIVITY', accent: '#FF7675' },
-    'Cultural Activity': { icon: 'music-note', category: 'ACTIVITY', accent: '#DFE6E9' },
-    'Mentor Meeting': { icon: 'account-tie', category: 'MEETING', accent: '#74B9FF' },
-    'Industrial Connect': { icon: 'factory', category: 'MEETING', accent: '#B2BEC3' },
-    'Tutorial': { icon: 'school-outline', category: 'THEORY', accent: '#636E72' },
-    'Remedial Lecture': { icon: 'book-education-outline', category: 'THEORY', accent: '#FFEAA7' },
+    'Communication skills': { icon: 'microphone-outline', category: 'THEORY', accent: '#FDCB6E' },
+    'Mathematical 2 lab': { icon: 'calculator-variant', category: 'LAB', accent: '#6C5CE7' },
+    'PPS lab': { icon: 'code-tags-check', category: 'LAB', accent: '#0984E3' },
+    'Communication skills lab': { icon: 'microphone-variant', category: 'LAB', accent: '#FDCB6E' },
+    'workshop lab': { icon: 'hammer-wrench', category: 'LAB', accent: '#E84393' },
+    'Engineering mechanics lab': { icon: 'cog-outline', category: 'LAB', accent: '#E17055' },
+    'Chemistry lab': { icon: 'flask', category: 'LAB', accent: '#00B894' },
 };
 
 const ResourceCard = ({ subject, isDark = false }) => {

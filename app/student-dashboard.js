@@ -11,8 +11,8 @@ import AppSidebar from '../components/AppSidebar';
 import InfoSections from '../components/InfoSections';
 import ProfileTab from '../components/ProfileTab';
 import CalendarStrip from '../components/CalendarStrip';
-import AppHeader from '../components/AppHeader';
 import { generateMonthDays, getInitials } from '../utils/dashboardHelpers';
+import AppHeader from '../components/AppHeader';
 
 export default function StudentDashboard() {
     const router = useRouter();
@@ -24,6 +24,7 @@ export default function StudentDashboard() {
     const [attendancePct, setAttendancePct] = useState(0);
     const [attendanceStats, setAttendanceStats] = useState({ present: 0, total: 0 });
     const [subjectAttendance, setSubjectAttendance] = useState({});
+    const [allLogs, setAllLogs] = useState([]);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -61,18 +62,26 @@ export default function StudentDashboard() {
                 return;
             }
 
-            // 1. Fetch profile using wildcard to avoid "column not found" errors
             const { data: profileData, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
-                .single();
+                .maybeSingle();
 
             if (profileError) {
-                console.error("Error fetching profile:", profileError.message);
+                console.error("Error fetching student profile:", profileError.message);
             }
 
-            setProfile(profileData);
+            const currentProfile = profileData ? {
+                ...profileData,
+                email: profileData.email || session.user.email,
+                full_name: profileData.full_name || profileData.name
+            } : {
+                email: session.user.email,
+                full_name: session.user.user_metadata?.full_name || 'Academic Student'
+            };
+
+            setProfile(currentProfile);
 
             // 2. If student has roll_no and branch, fetch real attendance
             if (profileData?.roll_no && profileData?.branch) {
@@ -83,23 +92,17 @@ export default function StudentDashboard() {
                     .eq('branch', profileData.branch);
 
                 if (logs && logs.length > 0) {
-                    const total = logs.length;
-                    const present = logs.filter(l => l.status === 1).length;
+                    setAllLogs(logs);
+                    const safeLogs = logs || [];
+                    const total = safeLogs.length;
+                    const present = safeLogs.filter(l => l.status === 1).length;
                     const pct = Math.round((present / total) * 100);
                     setAttendancePct(pct);
                     setAttendanceStats({ present, total });
-
-                    // Build per-subject attendance map for today
-                    const now = new Date();
-                    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                    const todayMap = {};
-                    logs.filter(l => l.date === today).forEach(l => {
-                        todayMap[l.subject] = l.status === 1;
-                    });
-                    setSubjectAttendance(todayMap);
                 } else {
                     setAttendancePct(0);
                     setAttendanceStats({ present: 0, total: 0 });
+                    setAllLogs([]);
                 }
             }
         } catch (err) {
@@ -112,6 +115,24 @@ export default function StudentDashboard() {
     };
 
     // getInitials imported from utils/dashboardHelpers
+
+    useEffect(() => {
+        if (!allLogs || allLogs.length === 0) {
+            setSubjectAttendance({});
+            return;
+        }
+        
+        const year = calendarDate.getFullYear();
+        const month = String(calendarDate.getMonth() + 1).padStart(2, '0');
+        const day = String(selectedDate).padStart(2, '0');
+        const targetDate = `${year}-${month}-${day}`;
+        
+        const dayMap = {};
+        allLogs.filter(l => l.date === targetDate).forEach(l => {
+            dayMap[l.subject] = l.status === 1;
+        });
+        setSubjectAttendance(dayMap);
+    }, [allLogs, calendarDate, selectedDate]);
 
     const t = (light, dark) => isDark ? dark : light;
 
@@ -150,24 +171,57 @@ export default function StudentDashboard() {
 
     const rawSubjects = profile?.subjects && profile.subjects.length > 0 
         ? profile.subjects 
-        : ['Mathematics 2', 'Chemistry', 'Engineering Mechanics', 'PPS', 'Communication Skill', 'Workshop', 'PPS Lab', 'Communication Skill Lab', 'Workshop Lab', 'Engineering Mechanics Lab', 'Chemistry Lab'];
+        : [
+            'Engineering mechanics', 
+            'Communication skills', 
+            'Chemistry', 
+            'Mathematical 2', 
+            'PPS', 
+            'Engineering mechanics lab', 
+            'Communication skills lab', 
+            'Chemistry lab', 
+            'Mathematical 2 lab', 
+            'PPS lab', 
+            'workshop lab'
+        ];
 
     const normalizeSubject = (s) => {
         if (!s) return s;
         const n = s.trim();
-        if (n.toUpperCase() === 'M2' || n === 'Mathematics 2') return 'Mathematics 2';
-        if (n.toLowerCase().includes('communication skill lab')) return 'Communication Skill Lab';
-        if (n.toLowerCase().includes('engineering mechanics lab') || n.toLowerCase().includes('mechanics lab (em)')) return 'Engineering Mechanics Lab';
-        if (n.toLowerCase().includes('pps lab')) return 'PPS Lab';
-        if (n.toLowerCase().includes('chemistry lab')) return 'Chemistry Lab';
-        if (n.toLowerCase().includes('workshop lab')) return 'Workshop Lab';
+        const low = n.toLowerCase();
+        
+        if (low.includes('mathematical 2 lab')) return 'Mathematical 2 lab';
+        if (low === 'm2' || low === 'mathematical 2') return 'Mathematical 2';
+        
+        if (low.includes('communication skills lab')) return 'Communication skills lab';
+        if (low.includes('communication skills')) return 'Communication skills';
+        
+        if (low.includes('engineering mechanics lab')) return 'Engineering mechanics lab';
+        if (low.includes('engineering mechanics')) return 'Engineering mechanics';
+        
+        if (low.includes('pps lab')) return 'PPS lab';
+        if (low.includes('pps')) return 'PPS';
+        
+        if (low.includes('chemistry lab')) return 'Chemistry lab';
+        if (low.includes('chemistry')) return 'Chemistry';
+        
+        if (low.includes('workshop lab')) return 'workshop lab';
+        
         return n;
     };
 
     let studentSubjects = rawSubjects.map(normalizeSubject);
     
     // Force inject the new practical subjects if they aren't saved in the user's Supabase profile yet
-    const requiredLabs = ['PPS Lab', 'Communication Skill Lab', 'Workshop Lab', 'Engineering Mechanics Lab', 'Chemistry Lab'];
+    const requiredLabs = [
+        'Engineering mechanics lab', 
+        'Communication skills lab', 
+        'Chemistry lab', 
+        'Mathematical 2 lab', 
+        'PPS lab', 
+        'workshop lab'
+    ];
+    
     requiredLabs.forEach(lab => {
         if (!studentSubjects.includes(lab)) {
             studentSubjects.push(lab);
@@ -175,25 +229,17 @@ export default function StudentDashboard() {
     });
 
     const SUBJECT_META = {
-        'Mathematics 2': { icon: 'calculator-variant', category: 'THEORY', accent: '#6C5CE7' },
+        'Mathematical 2': { icon: 'calculator-variant', category: 'THEORY', accent: '#6C5CE7' },
         'Chemistry': { icon: 'flask-outline', category: 'THEORY', accent: '#00B894' },
-        'Engineering Mechanics': { icon: 'cog-outline', category: 'THEORY', accent: '#E17055' },
+        'Engineering mechanics': { icon: 'cog-outline', category: 'THEORY', accent: '#E17055' },
         'PPS': { icon: 'code-tags', category: 'THEORY', accent: '#0984E3' },
-        'Communication Skill': { icon: 'microphone-outline', category: 'THEORY', accent: '#FDCB6E' },
-        'Workshop': { icon: 'hammer-wrench', category: 'PRACTICAL', accent: '#E84393' },
-        'Practical': { icon: 'test-tube', category: 'PRACTICAL', accent: '#00CEC9' },
-        'NSS': { icon: 'account-group-outline', category: '', accent: '#A29BFE' },
-        'Skill Development': { icon: 'lightbulb-on-outline', category: '', accent: '#FD79A8' },
-        'Sport Activity': { icon: 'basketball', category: '', accent: '#FF7675' },
-        'Cultural Activity': { icon: 'music-note', category: '', accent: '#DFE6E9' },
-        'Mentor Meeting': { icon: 'account-tie', category: '', accent: '#74B9FF' },
-        'Tutorial': { icon: 'school-outline', category: 'THEORY', accent: '#636E72' },
-        'Remedial Lecture': { icon: 'book-education-outline', category: 'THEORY', accent: '#FFEAA7' },
-        'PPS Lab': { icon: 'code-tags-check', category: 'PRACTICAL', accent: '#0984E3' },
-        'Communication Skill Lab': { icon: 'microphone-variant', category: 'PRACTICAL', accent: '#FDCB6E' },
-        'Workshop Lab': { icon: 'hammer-wrench', category: 'PRACTICAL', accent: '#E84393' },
-        'Engineering Mechanics Lab': { icon: 'cog-outline', category: 'PRACTICAL', accent: '#E17055' },
-        'Chemistry Lab': { icon: 'flask', category: 'PRACTICAL', accent: '#00B894' },
+        'Communication skills': { icon: 'microphone-outline', category: 'THEORY', accent: '#FDCB6E' },
+        'Mathematical 2 lab': { icon: 'calculator-variant', category: 'PRACTICAL', accent: '#6C5CE7' },
+        'PPS lab': { icon: 'code-tags-check', category: 'PRACTICAL', accent: '#0984E3' },
+        'Communication skills lab': { icon: 'microphone-variant', category: 'PRACTICAL', accent: '#FDCB6E' },
+        'workshop lab': { icon: 'hammer-wrench', category: 'PRACTICAL', accent: '#E84393' },
+        'Engineering mechanics lab': { icon: 'cog-outline', category: 'PRACTICAL', accent: '#E17055' },
+        'Chemistry lab': { icon: 'flask', category: 'PRACTICAL', accent: '#00B894' },
     };
 
     const renderSubjectItem = (subject, idx) => {
@@ -247,14 +293,13 @@ export default function StudentDashboard() {
 
     return (
         <View style={[styles.root, { backgroundColor: t('#f9f9fe', '#000000') }]}>
-            <AppHeader
+            <AppHeader 
                 activeTab={activeTab}
                 profile={profile}
                 onOpenMenu={() => setIsSidebarOpen(true)}
                 onAvatarPress={() => setActiveTab('profile')}
                 roleTitle="STUDENT DASHBOARD"
             />
-
             <ScrollView 
                 contentContainerStyle={[styles.container, { paddingBottom: 120 }]} 
                 showsVerticalScrollIndicator={false}
@@ -263,7 +308,7 @@ export default function StudentDashboard() {
                     <>
                         <View style={styles.greetingSection}>
                             <Text variant="displaySmall" style={[styles.greetingTitle, { color: t('#2f333a', '#ffffff') }]}>
-                                {getGreeting()}, {profile?.full_name?.split(' ')[0] || 'Alex'}!
+                                {getGreeting()}, {profile?.full_name?.split(' ')[0] || 'Student'}!
                             </Text>
                             <Text variant="bodyLarge" style={[styles.greetingDate, { color: t('#91939c', '#aeafb4') }]}>{formattedDate}</Text>
                         </View>
@@ -291,8 +336,9 @@ export default function StudentDashboard() {
                             <Text variant="titleLarge" style={[styles.metricTitle, { color: t('#2f333a', '#ffffff') }]}>Overall Attendance</Text>
                             
                             <View style={styles.meterContainer}>
-                                <View style={[styles.meterCircle, { borderColor: t('#f2f3fa', '#2a2d35') }]}>
-                                    <View style={[styles.meterProgress, { transform: [{ rotate: '45deg' }] }]} />
+                                <View style={[styles.meterCircle, { 
+                                    borderColor: attendancePct >= 75 ? '#4caf50' : attendancePct > 0 ? '#fa746f' : t('#f2f3fa', '#2a2d35') 
+                                }]}>
                                     <View style={styles.meterInner}>
                                         <Text style={[styles.meterValue, { color: t('#2f333a', '#ffffff') }]}>{attendancePct}%</Text>
                                         <Text style={styles.meterStatus}>
@@ -318,27 +364,22 @@ export default function StudentDashboard() {
                                     <Text style={styles.attendanceStatLabel}>ABSENT</Text>
                                 </View>
                             </View>
-
-                            <View style={styles.metricFooter}>
-                                <MaterialCommunityIcons name="trending-up" size={16} color="#426658" />
-                                <Text style={styles.metricFooterText}>3% increase from last semester</Text>
-                            </View>
                         </View>
 
                         <View style={styles.scheduleHeader}>
-                            <Text variant="titleLarge" style={[styles.scheduleTitle, { color: t('#2f333a', '#ffffff') }]}>My Subjects</Text>
+                            <Text variant="titleLarge" style={[styles.scheduleTitle, { color: t('#2f333a', '#ffffff') }]}>Daily Lectures</Text>
                         </View>
 
                         <View style={styles.scheduleList}>
-                            {studentSubjects.length > 0 ? (
+                            {Object.keys(subjectAttendance).length > 0 ? (
                                 <View style={[styles.scheduleListContainer, { backgroundColor: t('#ffffff', '#1e1e1e') }]}>
-                                    {studentSubjects.map((sub, idx) => renderSubjectItem(sub, idx))}
+                                    {Object.keys(subjectAttendance).map((sub, idx) => renderSubjectItem(sub, idx))}
                                 </View>
                             ) : (
                                 <EmptyState 
-                                    icon="book-open-variant" 
-                                    message="No Subjects Scheduled" 
-                                    subMessage="Enjoy your free time!" 
+                                    icon="bed" 
+                                    message="No Lectures Recorded" 
+                                    subMessage="No attendance was marked for this date." 
                                     style={{ marginVertical: 20 }}
                                 />
                             )}
@@ -348,16 +389,36 @@ export default function StudentDashboard() {
 
                 {activeTab === 'attendance' && (
                     <View style={{ marginTop: 24 }}>
-                        <Text variant="headlineSmall" style={[styles.sectionTitle, { color: t('#2f333a', '#ffffff') }]}>Attendance History</Text>
-                        <Text style={[styles.sectionSub, { color: t('#91939c', '#aeafb4') }]}>Track your progress over time</Text>
+                        <Text variant="headlineSmall" style={[styles.sectionTitle, { color: t('#2f333a', '#ffffff') }]}>Attendance Breakdown</Text>
+                        <Text style={[styles.sectionSub, { color: t('#91939c', '#aeafb4') }]}>Overall progress by subject</Text>
                         
-                        <View style={[styles.historyPlaceholder, { backgroundColor: t('#ffffff', '#1e1e1e') }]}>
-                            <EmptyState 
-                                icon="calendar-clock" 
-                                message="No Detailed History" 
-                                subMessage="Attendance history logging starts soon."
-                                style={{ marginVertical: 40 }}
-                            />
+                        <View style={{ marginTop: 24, paddingBottom: 100 }}>
+                            {studentSubjects.map((sub, idx) => {
+                                const subLogs = allLogs.filter(l => l.subject === sub);
+                                if (subLogs.length === 0) return null;
+                                const total = subLogs.length;
+                                const present = subLogs.filter(l => l.status === 1).length;
+                                const pct = Math.round((present / total) * 100);
+                                return (
+                                    <View key={idx} style={[styles.scheduleCard, { marginBottom: 12, backgroundColor: t('#ffffff', '#1e1e1e'), borderColor: t('rgba(0,0,0,0.04)', 'rgba(255,255,255,0.06)') }]}>
+                                        <View style={[styles.scheduleContent, { paddingHorizontal: 0 }]}>
+                                            <Text style={[styles.subjectName, { color: t('#1a1a2e', '#ffffff') }]}>{sub}</Text>
+                                            <Text style={{ fontSize: 12, color: t('#91939c', '#aeafb4'), marginTop: 4 }}>{present} of {total} attended</Text>
+                                        </View>
+                                        <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
+                                            <Text style={{ fontSize: 20, fontWeight: '900', color: pct >= 75 ? '#4caf50' : '#f44336' }}>{pct}%</Text>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                            {allLogs.length === 0 && (
+                                <EmptyState 
+                                    icon="calendar-blank" 
+                                    message="No Data Yet" 
+                                    subMessage="Attendance history will appear here."
+                                    style={{ marginVertical: 40 }}
+                                />
+                            )}
                         </View>
                     </View>
                 )}
@@ -368,7 +429,7 @@ export default function StudentDashboard() {
                         <Text style={[styles.sectionSub, { color: t('#91939c', '#aeafb4') }]}>Access materials from Google Drive</Text>
                         
                         <View style={{ marginTop: 20 }}>
-                            {studentSubjects.map((sub, idx) => (
+                            {['Engineering mechanics', 'Communication skills', 'Chemistry', 'Mathematical 2', 'PPS', 'workshop lab'].map((sub, idx) => (
                                 <ResourceCard key={idx} subject={sub} isDark={isDark} />
                             ))}
                         </View>

@@ -1,0 +1,963 @@
+{
+    "MES_Mukunddas_Lohia_College_of_Engineering": {
+        "Academic_Year": "2025-26",
+        "Departments": {
+            "Computer_Science_and_Engineering_AIML": [
+                {
+                    "Name": "ABHAY ANKUSH WALKE",
+                    "Email": "abhaywalke96@gmail.com"
+                },
+                {
+                    "Name": "ADITEE RAVINDRA TEMGHARE",
+                    "Email": "temghareaditee@gmail.com"
+                },
+                {
+                    "Name": "ADITYA GIRISH THUBE",
+                    "Email": "adityathube2299@gmail.com"
+                },
+                {
+                    "Name": "ADITYA SANDIPAN PAWAR",
+                    "Email": "pawaraditya1505@gmail.com"
+                },
+                {
+                    "Name": "AMOGH PRABHAKAR RODGE",
+                    "Email": "amoghrodge@gmail.com"
+                },
+                {
+                    "Name": "ANIKET RAJENDRA PANDHARKAR",
+                    "Email": "aniketpandharkar953@gmail.com"
+                },
+                {
+                    "Name": "ANJALI MUKUND SHINDE",
+                    "Email": "anjalishinde2007@gmail.com"
+                },
+                {
+                    "Name": "ANUSHKA VIJAY SALVE",
+                    "Email": "anushkasalve456@gmail.com"
+                },
+                {
+                    "Name": "ARYAN VIJAY ATKORE",
+                    "Email": "aryanatkore@gmail.com"
+                },
+                {
+                    "Name": "AYUSH RAVINDRA NIMBHARE",
+                    "Email": "nimbhareayush123@gmail.com"
+                },
+                {
+                    "Name": "BHARGAV BAPU CHAVAN",
+                    "Email": "bhargavchavan325@gmail.com"
+                },
+                {
+                    "Name": "DATTATRAY LAXMAN MOHALKAR",
+                    "Email": "aadityamohalkar@gmail.com"
+                },
+                {
+                    "Name": "DEVYANI NAGRAM JADHAV",
+                    "Email": "devyani@286@gmail.com"
+                },
+                {
+                    "Name": "DNYANRATNA CHANDRASHEKHAR MATHPATI",
+                    "Email": "dnyanratnamathpati@gmail.com"
+                },
+                {
+                    "Name": "GAURI SHASHIKANT VYAVAHARE",
+                    "Email": "gaurivyavahare18@gmail.com"
+                },
+                {
+                    "Name": "GIRIJA RAHUL KSHIRSAGAR",
+                    "Email": "girija15022008@gmail.com"
+                },
+                {
+                    "Name": "GOURISH ATUL KATKAR",
+                    "Email": "gourishkatkar@gmail.com"
+                },
+                {
+                    "Name": "GOVIND UDAY GANDHI",
+                    "Email": "govindugandhi@gmail.com"
+                },
+                {
+                    "Name": "GUNJAN SUNIL KANADE",
+                    "Email": "gunjankanade2@gmail.com"
+                },
+                {
+                    "Name": "HARIOM ASHOK GAIKWAD",
+                    "Email": "gaikwadhariom46@gmail.com"
+                },
+                {
+                    "Name": "JAINAB NAZIM KAZI",
+                    "Email": "jainabkazi575@gmail.com"
+                },
+                {
+                    "Name": "KARAN CHANDRAKANT NAYBAL",
+                    "Email": "naybalkaran07@gmail.com"
+                },
+                {
+                    "Name": "MANASI SANJAY DHUPKAR",
+                    "Email": "manasidhupkar@gmail.com"
+                },
+                {
+                    "Name": "NAMRATA SANTOSH CHAVAN",
+                    "Email": "namratachavan36524@gmail.com"
+                },
+                {
+                    "Name": "NANDINI GOPAL LANDGE",
+                    "Email": "nandinilandge79@gmail.com"
+                },
+                {
+                    "Name": "NANDINI KRISHNA GURRAM",
+                    "Email": "nandinigurram211@gmail.com"
+                },
+                {
+                    "Name": "NEEV LAXMAN THAKUR",
+                    "Email": "neevthakur18@gmail.com"
+                },
+                {
+                    "Name": "NIRANJAN NANDU TAKALKAR",
+                    "Email": "niranjantakalkar@gmail.com"
+                },
+                {
+                    "Name": "ONKAR RAVSO KADAM",
+                    "Email": "onkarikadam820@gmail.com"
+                },
+                {
+                    "Name": "PALAK VINOD KATHAR",
+                    "Email": "palakkathar@gmail.com"
+                },
+                {
+                    "Name": "PARIS RAJENDRA CHAUDHARI",
+                    "Email": "parischaudhari130@gmail.com"
+                },
+                {
+                    "Name": "PIYUSH SHANKAR MAZIRE",
+                    "Email": "piyushmazire07@gmail.com"
+                },
+                {
+                    "Name": "PRANAV DHANANJAY KADAM",
+                    "Email": "pran182006@gmail.com"
+                },
+                {
+                    "Name": "PRANAV RAJENDRA KADAM",
+                    "Email": "pranavkd2007@gmail.com"
+                },
+                {
+                    "Name": "PRANAV SHAHAJI SURYAWANSHI",
+                    "Email": "pranavsuryawanshi9765@gmail.com"
+                },
+                {
+                    "Name": "PRANAY SUNIL PATIL",
+                    "Email": "pranaypatil1724@gmail.com"
+                },
+                {
+                    "Name": "PREM MOHAN SINHE",
+                    "Email": "sinheprem1@gmail.com"
+                },
+                {
+                    "Name": "RAHUL KISAN BHENDARWAL",
+                    "Email": "rajputrahu18730@gmail.com"
+                },
+                {
+                    "Name": "RAZA WAHAB DAREKAR",
+                    "Email": "razadarekari25@gmail.com"
+                },
+                {
+                    "Name": "RIDDHI SHAILESH PIMPALE",
+                    "Email": "riddhipimpale227@gmail.com"
+                },
+                {
+                    "Name": "RITESH BASAWARAJ VALSANGE",
+                    "Email": "riteshvalsange@gmail.com"
+                },
+                {
+                    "Name": "ROSHANI SUNIL GHUGE",
+                    "Email": "ghugeroshani3@gmail.com"
+                },
+                {
+                    "Name": "RUCHIRA RAMESH YEMUL",
+                    "Email": "ruchi252007@gmail.com"
+                },
+                {
+                    "Name": "SAHIL ROHIT KINIKAR",
+                    "Email": "sahilkinikar7@gmail.com"
+                },
+                {
+                    "Name": "SAKSHI BALAJI PHAD",
+                    "Email": "phadsakshi54@gmail.com"
+                },
+                {
+                    "Name": "SAMARTH MAHESH TAKAWALE",
+                    "Email": "samarthtakawale0@gmail.com"
+                },
+                {
+                    "Name": "SAMRUDDHI KISHOR PAWAR",
+                    "Email": "samruddhipawar0214@gmail.com"
+                },
+                {
+                    "Name": "SANIKA SACHIN SUPEKAR",
+                    "Email": "sanika.supekar07@gmail.com"
+                },
+                {
+                    "Name": "SARVESH MAHAVIR SANGHAI",
+                    "Email": "sarveshsanghai.1720006@gmail.com"
+                },
+                {
+                    "Name": "SHRAVANI ANAND GADE",
+                    "Email": "gadeshruti2020@gmail.com"
+                },
+                {
+                    "Name": "SHRIKANT MAHADEV JADHAV",
+                    "Email": "shrikantjadhav0702@gmail.com"
+                },
+                {
+                    "Name": "SHRIKANT SHIVLAL DHORE",
+                    "Email": "dhorepushpa171@gmail.com"
+                },
+                {
+                    "Name": "SRUSHTI SANDIP SURYAKAR",
+                    "Email": "suryakarsrushti@gmail.com"
+                },
+                {
+                    "Name": "SUJAL LAXMAN GAWADE",
+                    "Email": "sujalgawade501@gmail.com"
+                },
+                {
+                    "Name": "TANISHQA SUNIL MODHAVE",
+                    "Email": "tanishqa150307@gmail.com"
+                },
+                {
+                    "Name": "TEJASWINI UMESH KOTWAL",
+                    "Email": "tukotwal0806@gmail.com"
+                },
+                {
+                    "Name": "VARAD SANJAY CHANDRAS",
+                    "Email": "varadchandras@gmail.com"
+                },
+                {
+                    "Name": "VARAD VINAYAK ATHAVALE",
+                    "Email": "varadvinayakva2@gmail.com"
+                },
+                {
+                    "Name": "VEDASHREE KIRAN KAYANDE",
+                    "Email": "kayandevedashree6@gmail.com"
+                },
+                {
+                    "Name": "VEDIKA RAVINDRA DAUNDKAR",
+                    "Email": "vedikadaundkar@gmail.com"
+                },
+                {
+                    "Name": "VIDHI RAJKUMAR ATTAL",
+                    "Email": "attalvidhi@gmail.com"
+                },
+                {
+                    "Name": "VINEET NITIN SAKAT",
+                    "Email": "sakatvinit9823@gmail.com"
+                },
+                {
+                    "Name": "YASH KAILAS GUJAR",
+                    "Email": "ygujar631@gmail.com"
+                },
+                {
+                    "Name": "AARYA ABHIJEET GIRME",
+                    "Email": "aaryagirme42@gmail.com"
+                }
+            ],
+            "Computer_Engineering": [
+                {
+                    "Name": "AAYUSH GANESH KANDHARE",
+                    "Email": "aayushkandhare07@gmail.com"
+                },
+                {
+                    "Name": "ABHISHEK EKNATH GHULE",
+                    "Email": "abhiguhe1610@gmail.com"
+                },
+                {
+                    "Name": "ADITYA SAINATH WARKAR",
+                    "Email": "adityawarkar18@gmail.com"
+                },
+                {
+                    "Name": "ANIKET KAILAS KOLSEPATIL",
+                    "Email": "aniketkolse07@gmail.com"
+                },
+                {
+                    "Name": "ANUPRAS SACHIN ZINJADE",
+                    "Email": "zinjadeanupras@gmail.com"
+                },
+                {
+                    "Name": "ANUSHKA GANESH RAUT",
+                    "Email": "katodomoon69@gmail.com"
+                },
+                {
+                    "Name": "ANWESHA JAILESH GAIKWAD",
+                    "Email": "anweshagaikwad6@gmail.com"
+                },
+                {
+                    "Name": "ARYA KIRAN DHAVANE",
+                    "Email": "aryadhavane@gmail.com"
+                },
+                {
+                    "Name": "ATHARV RAJARAM CHOUGULE",
+                    "Email": "atharvchougule212007@gmail.com"
+                },
+                {
+                    "Name": "BHOOMI SACHIN HEDA",
+                    "Email": "bhoomiheda94@gmail.com"
+                },
+                {
+                    "Name": "CHIRAYU SACHIN LUNAWAT",
+                    "Email": "chirayulunawat7@gmail.com"
+                },
+                {
+                    "Name": "DNYANDA SHAILESH BABAR",
+                    "Email": "dnyandababar09@gmail.com"
+                },
+                {
+                    "Name": "GARGI SACHIN MARKALE",
+                    "Email": "gargi0422@gmail.com"
+                },
+                {
+                    "Name": "GORE PUSHPAHAS PRAKASH",
+                    "Email": "pushpahasgore@gmail.com"
+                },
+                {
+                    "Name": "HARSH RAMRAO BIRADAR",
+                    "Email": "biradarharsh48@gmail.com"
+                },
+                {
+                    "Name": "HARSHAL SHANKAR KARCHKHED",
+                    "Email": "harshalkarchkhed2007@gmail.com"
+                },
+                {
+                    "Name": "ISHAN PRANAY DALVI",
+                    "Email": "ishandalvi834@gmail.com"
+                },
+                {
+                    "Name": "JAY LALIT BHOLE",
+                    "Email": "jaylalithbole@gmail.com"
+                },
+                {
+                    "Name": "KALYANI RAMESHWAR DOKHE",
+                    "Email": "kalyanidokhe11.1@gmail.com"
+                },
+                {
+                    "Name": "KARUNASHREE RAMPRASAD SAIRI",
+                    "Email": "karunasairi@gmail.com"
+                },
+                {
+                    "Name": "KRISHNA CHANDRAKANT MAHAJAN",
+                    "Email": "krushnmahajan@gmail.com"
+                },
+                {
+                    "Name": "MADHURA MUKESH KSHIRSAGAR",
+                    "Email": "madhuksagar28@gmail.com"
+                },
+                {
+                    "Name": "MIT SHRIKANT KARWA",
+                    "Email": "mitkarwa21@gmail.com"
+                },
+                {
+                    "Name": "MOHIT AMIT KHANDELWAL",
+                    "Email": "mohitkhandelwal2007@gmail.com"
+                },
+                {
+                    "Name": "NAVYA HEMANT HADOLE",
+                    "Email": "navyahadole@gmail.com"
+                },
+                {
+                    "Name": "NIKHIL SUDHAKAR SHINDE",
+                    "Email": "nikhilshinde5471@gmail.com"
+                },
+                {
+                    "Name": "NIKITA RAMESH MHASKE",
+                    "Email": "mhaskenikita484@gmail.com"
+                },
+                {
+                    "Name": "NISHA GOTU DHANGAR",
+                    "Email": "nishadhangar715@gmail.com"
+                },
+                {
+                    "Name": "PRATHAMESH KASHINATH KASAR",
+                    "Email": "kasarpratham08@gmail.com"
+                },
+                {
+                    "Name": "PRATHAMESH SANJAY BHUJBAL",
+                    "Email": "prathameshbhujbal2007@gmail.com"
+                },
+                {
+                    "Name": "PRATIK NAMDEV MORE",
+                    "Email": "pm17.more@gmail.com"
+                },
+                {
+                    "Name": "PUJARI SARTHAK SUNIL",
+                    "Email": "pujarisarthako3@gmail.com"
+                },
+                {
+                    "Name": "RAJDEEP RAHUL BHOSALE",
+                    "Email": "rajdeepb2007@gmail.com"
+                },
+                {
+                    "Name": "REHAN KAMRUDDIN SHAIKH",
+                    "Email": "rehanshaikh111906@gmail.com"
+                },
+                {
+                    "Name": "RISHIKA RAJU YADAV",
+                    "Email": "rishikayadav0103@gmail.com"
+                },
+                {
+                    "Name": "ROHIT DIPAKSINGH THAKUR",
+                    "Email": "rohit1757thakur@gmail.com"
+                },
+                {
+                    "Name": "RUCHA PRASAD PARANJAPE",
+                    "Email": "ruchamp12@gmail.com"
+                },
+                {
+                    "Name": "RUTUJA PRASHANT DARE",
+                    "Email": "rutujadare@gmail.com"
+                },
+                {
+                    "Name": "SAHIL BALU JOGALE",
+                    "Email": "jogalesahil88@gmail.com"
+                },
+                {
+                    "Name": "SAKSHI SHANKAR BAHGAT",
+                    "Email": "vanitabhagat750@gmail.com"
+                },
+                {
+                    "Name": "SAMARTH TRIMBAK BHUTEKAR",
+                    "Email": "samarthbhutekar17@gmail.com"
+                },
+                {
+                    "Name": "SANCHIT SANTOSH SATALE",
+                    "Email": "sanchitsatale07@gmail.com"
+                },
+                {
+                    "Name": "SANDHYA TANAJI BHOSALE",
+                    "Email": "bhosalesandhya2623@gmail.com"
+                },
+                {
+                    "Name": "SANIKA SAMBHAJI WATKAR",
+                    "Email": "watkarsanika43@gmail.com"
+                },
+                {
+                    "Name": "SARTHAK HARIBHAU PAUL",
+                    "Email": "sarthakpaul397@gmail.com"
+                },
+                {
+                    "Name": "SAYALI PRAVIN PAYGUDE",
+                    "Email": "sayalipaygude2007@gmail.com"
+                },
+                {
+                    "Name": "SAYALI VIJAY GHAYTADAKAR",
+                    "Email": "sayalighaytadkar@gmail.com"
+                },
+                {
+                    "Name": "SHREYA ARUN SHINDE",
+                    "Email": "shreyashinde8815@gmail.com"
+                },
+                {
+                    "Name": "SHUBHAM DIPAK CHUNGADE",
+                    "Email": "shubhamrajput67413@gmail.com"
+                },
+                {
+                    "Name": "SNEHA RAVINDRA PATIL",
+                    "Email": "sneharp1707@gmail.com"
+                },
+                {
+                    "Name": "SRUSHTI SHASHIKANT KATKAR",
+                    "Email": "srushtikatkar552@gmail.com"
+                },
+                {
+                    "Name": "SRUSHTI SUNIL SHINDE",
+                    "Email": "srushtisrushti147@gmail.com"
+                },
+                {
+                    "Name": "SWAPNIL ASHOK SALVE",
+                    "Email": "swapnilsalve821@gmail.com"
+                },
+                {
+                    "Name": "TANISHKA ROHIDAS GUPTE",
+                    "Email": "tanishkagupte06@gmail.com"
+                },
+                {
+                    "Name": "UTKARSHA CHANDRKANT NIPRUL",
+                    "Email": "utkarshaniprul@gmail.com"
+                },
+                {
+                    "Name": "VAISHNAVI VIVEKANAND SWAMI",
+                    "Email": "swamivaishnavi2007@gmail.com"
+                },
+                {
+                    "Name": "YASHRAJ BHAUSAHEB JANJIRE",
+                    "Email": "yashrajj7575@gmail.com"
+                }
+            ],
+            "Electronics_and_Telecommunication_Engineering": [
+                {
+                    "Name": "AARYA SACHIN KALE",
+                    "Email": "kalearya9763@gmail.com"
+                },
+                {
+                    "Name": "AARYAN ASHOK SALUNKE",
+                    "Email": "aaryan.salunke3907@gmail.com"
+                },
+                {
+                    "Name": "ABHIMAN PRADEEP SHINDE",
+                    "Email": "abhimanshinde506@gmail.com"
+                },
+                {
+                    "Name": "ADITYA ANANDA KARANDE",
+                    "Email": "adityakarande215@gmail.com"
+                },
+                {
+                    "Name": "ANUSHKA ANAND KULKARNI",
+                    "Email": "anushka2042@gmail.com"
+                },
+                {
+                    "Name": "DHAWAL VINAYAK RAUT",
+                    "Email": "dhawal.v.raut@gmail.com"
+                },
+                {
+                    "Name": "DHRUVA MANOJ NAIR",
+                    "Email": "dnair087@gmail.com"
+                },
+                {
+                    "Name": "DHRUV PANKAJ PAWAR",
+                    "Email": "dhruvpawar879@gmail.com"
+                },
+                {
+                    "Name": "DNYANESHWARI UMESH KADAM",
+                    "Email": "kadamdnyaneshwari25@gmail.com"
+                },
+                {
+                    "Name": "JANAVI UTTAM CHIKANE",
+                    "Email": "janavichikane2007@gmail.com"
+                },
+                {
+                    "Name": "KARTIK RAJESH KATKAR",
+                    "Email": "kartikkatkar4@gmail.com"
+                },
+                {
+                    "Name": "KAUSTUBH BHARAT DISALE",
+                    "Email": "kaustubhdisale21@gmail.com"
+                },
+                {
+                    "Name": "KOMAL PRAKASH SURVE",
+                    "Email": "survekomal6478@gmail.com"
+                },
+                {
+                    "Name": "KSHITIJ ABHIMANYU PRADHAN",
+                    "Email": "kshitijpradhan248@gmail.com"
+                },
+                {
+                    "Name": "KUNAL SUNIL MANDALE",
+                    "Email": "kunalmandale007@gmail.com"
+                },
+                {
+                    "Name": "LAXMI KANARAM CHOUDHARY",
+                    "Email": "choudharylaxmi924@gmail.com"
+                },
+                {
+                    "Name": "MADAN RAMESH BHATI",
+                    "Email": "Madanbhati2050@gmail.com"
+                },
+                {
+                    "Name": "MALHAR SAMEER KHADKIKAR",
+                    "Email": "malharkhadikar@gmail.com"
+                },
+                {
+                    "Name": "MANASVI PRAFUL GAIKWAD",
+                    "Email": "manasvigaiwad0598@gmail.com"
+                },
+                {
+                    "Name": "MANOLKAR ROSHAN ABHAY",
+                    "Email": "roshanmanolkar7@gmail.com"
+                },
+                {
+                    "Name": "MOHIL MAHENDRA KAMBLE",
+                    "Email": "mohilimkamble@gmail.com"
+                },
+                {
+                    "Name": "NEEL RAVINDRA AHERRAO",
+                    "Email": "neelaherrao@gmail.com"
+                },
+                {
+                    "Name": "NIKHIL LALASO NAGAVE",
+                    "Email": "nagavenikhil@gmail.com"
+                },
+                {
+                    "Name": "NIRANJAN ASHRUBA NINALE",
+                    "Email": "ninaleniranjan0177@gmail.com"
+                },
+                {
+                    "Name": "ODEDARA DHRUV GOVINDBHAI",
+                    "Email": "dhruvodedara2007@gmail.com"
+                },
+                {
+                    "Name": "OMKAR BAPU NALAWADE",
+                    "Email": "nalawadebapu823@gmail.com"
+                },
+                {
+                    "Name": "PIYUSH ANAND SONAR",
+                    "Email": "piyushsonar1821@gmail.com"
+                },
+                {
+                    "Name": "PIYUSH KAILAS GAWAI",
+                    "Email": "gawaipiyush44@gmail.com"
+                },
+                {
+                    "Name": "PRASAD SACHIN CHAVAN",
+                    "Email": "prasadchavan1448@gmail.com"
+                },
+                {
+                    "Name": "PRASHANT GAJANAN HADPAD",
+                    "Email": "prashanthadpad233@gmail.com"
+                },
+                {
+                    "Name": "RADHIKA SUHAS JOSHI",
+                    "Email": "radhikajoshi.0807@gmail.com"
+                },
+                {
+                    "Name": "RAHUL RAMDAS SHINDE",
+                    "Email": "rahulshinde4807@gmail.com"
+                },
+                {
+                    "Name": "RANVEER RAJESH MARNE",
+                    "Email": "ranveermarane@gmail.com"
+                },
+                {
+                    "Name": "REVATI PADMAKAR KAPSE",
+                    "Email": "revti.sarde@gmail.com"
+                },
+                {
+                    "Name": "RITIKA NANASAHEB KELGANDRE",
+                    "Email": "ritikakelgandre@gmail.com"
+                },
+                {
+                    "Name": "RUSHIKESH BALAJI BHUJBALE",
+                    "Email": "rushikeshbbujale10@gmail.com"
+                },
+                {
+                    "Name": "SAKSHI RAMCHANDRA SHINDE",
+                    "Email": "sakshi21032007@gmail.com"
+                },
+                {
+                    "Name": "SAMARTH JITENDRA MURGULWAR",
+                    "Email": "samarthmurgulwar546@gmail.com"
+                },
+                {
+                    "Name": "SANGITA GANPAT CHALAKE",
+                    "Email": "sangitachalake420@gmail.com"
+                },
+                {
+                    "Name": "SARTHAKI SAMEER BORKAR",
+                    "Email": "sarthakiborkar727@gmail.com"
+                },
+                {
+                    "Name": "SAYALI DILIP CHOUDHARI",
+                    "Email": "sayalichoudhari83@gmail.com"
+                },
+                {
+                    "Name": "SHANTANU SANDEEP NAVALE",
+                    "Email": "shantanunavale73@gmail.com"
+                },
+                {
+                    "Name": "SHREYA SACHINSINGH THAKUR",
+                    "Email": "thakurshreyaprd@gmail.com"
+                },
+                {
+                    "Name": "SHREYAS RAJARAM BHAVAR",
+                    "Email": "shreyasbhavar2007@gmail.com"
+                },
+                {
+                    "Name": "SHRADDHA DAYANAND KARAJAGI",
+                    "Email": "shraddhadpkaraijagi17@gmail.com"
+                },
+                {
+                    "Name": "SHUBHRA SANTOSH KSHIRSAGAR",
+                    "Email": "shubhrakshirsagar2@gmail.com"
+                },
+                {
+                    "Name": "SOHAM RAJENDRA VAJE",
+                    "Email": "vajesoham1@gmail.com"
+                },
+                {
+                    "Name": "SOHAM RAJKUMAR GORE",
+                    "Email": "sohamgore2007@gmail.com"
+                },
+                {
+                    "Name": "TANISHQUA NILESH YEOLE",
+                    "Email": "tanishquayeole1@gmail.com"
+                },
+                {
+                    "Name": "UTKARSHA BALASAHEB GAWADE",
+                    "Email": "gawadeuttu43@gmail.com"
+                },
+                {
+                    "Name": "VAISHNAVI SOMINATH SULTANE",
+                    "Email": "vaishnavisultane68@gmail.com"
+                },
+                {
+                    "Name": "VEDANT DEVDAS INGALE",
+                    "Email": "vedantingale247@gmail.com"
+                },
+                {
+                    "Name": "VEDIKA VAMAN BIDVE",
+                    "Email": "bidvevedika@gmail.com"
+                },
+                {
+                    "Name": "VISHWAJEET SANJAY PAWAR",
+                    "Email": "pawarvishwajeet3883@gmail.com"
+                },
+                {
+                    "Name": "YASH NITIN CHANDELKAR",
+                    "Email": "yashchandelkar1@gmail.com"
+                },
+                {
+                    "Name": "YASH SANTOSH NALAWADE",
+                    "Email": "yashnalawade0007@gmail.com"
+                }
+            ],
+            "Information_Technology": [
+                {
+                    "Name": "ADITYA SACHIN VARPE",
+                    "Email": "aditya.s.varpe@gmail.com"
+                },
+                {
+                    "Name": "AKSHAINEE VIKRANT MANE",
+                    "Email": "akshainee2008@gmail.com"
+                },
+                {
+                    "Name": "ANANNYA ANIRUDHA PATIL",
+                    "Email": "patilananya353@gmail.com"
+                },
+                {
+                    "Name": "ANAY UMESH KULKARNI",
+                    "Email": "anaykulikarni673@gmail.com"
+                },
+                {
+                    "Name": "ANKITA ANANTA GHAG",
+                    "Email": "ankitaghag994@gmail.com"
+                },
+                {
+                    "Name": "ANMOL VINAY KAMBLE",
+                    "Email": "anmolv.kamble07@gmail.com"
+                },
+                {
+                    "Name": "ARCHILEE RAJENDRA GIRI",
+                    "Email": "archileegiri1605@gmail.com"
+                },
+                {
+                    "Name": "ARYAN MANGESH PIMPALKAR",
+                    "Email": "aryanpimpalkar006@gmail.com"
+                },
+                {
+                    "Name": "ATHARV KALYAN MORE",
+                    "Email": "atharvmore991@gmail.com"
+                },
+                {
+                    "Name": "AVANI VINAYAK CHILKA",
+                    "Email": "chilkavani@gmail.com"
+                },
+                {
+                    "Name": "DHIRAJ MANGESH DEVARE",
+                    "Email": "dhirajdevare4546@gmail.com"
+                },
+                {
+                    "Name": "HARSH VIPUL TANK",
+                    "Email": "tanhk631@gmail.com"
+                },
+                {
+                    "Name": "HARSHAD SANDIP NAGAVE",
+                    "Email": "harshadnagave96@gmail.com"
+                },
+                {
+                    "Name": "HARSHASANJEEV GHARU",
+                    "Email": "harshagharu108@gmail.com"
+                },
+                {
+                    "Name": "HIMAKSHI GORAKHNATH SHINDE",
+                    "Email": "himakshigorakhnathshinde@gmail.com"
+                },
+                {
+                    "Name": "INDRAYANI ANIL PATALYANTRI",
+                    "Email": "patalyantrindrayani@gmail.com"
+                },
+                {
+                    "Name": "ISHWAR NARAYAN UTADE",
+                    "Email": "rajput.ishwar0007@gmail.com"
+                },
+                {
+                    "Name": "KIRAN DINESH RAJPUT",
+                    "Email": "kr3755876@gmail.com"
+                },
+                {
+                    "Name": "MAMTA YADAV PANDILWAD",
+                    "Email": "pandilwadmamta23@gmail.com"
+                },
+                {
+                    "Name": "MANAS BHGAWAN TONDE",
+                    "Email": "manastonde2007@gmail.com"
+                },
+                {
+                    "Name": "MAYURESH VINAYAK BHANDARE",
+                    "Email": "mayureshbhandare1387@gmail.com"
+                },
+                {
+                    "Name": "NEHA DHANAJI KALSE",
+                    "Email": "nehakalse88@gmail.com"
+                },
+                {
+                    "Name": "NITESH SHAM PAWAR",
+                    "Email": "pawarnilesh882@gmail.com"
+                },
+                {
+                    "Name": "OM KISHOR MASKE",
+                    "Email": "omaske014@gmail.com"
+                },
+                {
+                    "Name": "OM RAKESH HABIB",
+                    "Email": "omkshatriya0007@gmail.com"
+                },
+                {
+                    "Name": "OMKAR KISHOR RAWAL",
+                    "Email": "omkarnikam794@gmail.com"
+                },
+                {
+                    "Name": "PIYUSH ANIL VAJE",
+                    "Email": "piyushvaje.88@gmail.com"
+                },
+                {
+                    "Name": "PRAJWAL BASAVRAJ BIRADAR",
+                    "Email": "prajwalbiradar1114@gmail.com"
+                },
+                {
+                    "Name": "PRANJAL SANJAYKUMAR SURYAWANSHI",
+                    "Email": "pranjalsuryawanshi1324@gmail.com"
+                },
+                {
+                    "Name": "PRASHANT BHARAT BITAKE",
+                    "Email": "prashantbitake12@gmail.com"
+                },
+                {
+                    "Name": "PRASOON SANDIP LAD",
+                    "Email": "prasoonlad36@gmail.com"
+                },
+                {
+                    "Name": "PRITI RAJARAM PAWASE",
+                    "Email": "pritipawase025@gmail.com"
+                },
+                {
+                    "Name": "RAKSHATA NAGARAJ KALSHETTY",
+                    "Email": "kalshettyrakshita25@gmail.com"
+                },
+                {
+                    "Name": "RANDIVE MANSI SANDIP",
+                    "Email": "mansirandive16@gmail.com"
+                },
+                {
+                    "Name": "ROHINI SANJAY JADHAV",
+                    "Email": "jadhavsg621@gmail.com"
+                },
+                {
+                    "Name": "ROHIT AJAY RATHOD",
+                    "Email": "rohitrathod66089@gmail.com"
+                },
+                {
+                    "Name": "ROHITKUMAR LALIT RATHOD",
+                    "Email": "rohitrathod433@gmail.com"
+                },
+                {
+                    "Name": "SAKSHI VISHWANATH JAWALKAR",
+                    "Email": "sakshijawalkar765@gmail.com"
+                },
+                {
+                    "Name": "SALONI AJAY SAWANT",
+                    "Email": "salonisawant544@gmail.com"
+                },
+                {
+                    "Name": "SAMIKSHA PAVAN MALOO",
+                    "Email": "maloasamiksha24@gmail.com"
+                },
+                {
+                    "Name": "SAMRUDDHI SANJAY SAWANT",
+                    "Email": "samruddhisawant024@gmail.com"
+                },
+                {
+                    "Name": "SARAH IRSHAD KHAN",
+                    "Email": "simplysarah077@gmail.com"
+                },
+                {
+                    "Name": "SARANG PRASHANT MANE",
+                    "Email": "Sarangmane011@gmail.com"
+                },
+                {
+                    "Name": "SARWADE PARAS PARMESHWAR",
+                    "Email": "sarwadeparas11@gmail.com"
+                },
+                {
+                    "Name": "SHOUNAK GANESH YENPURE",
+                    "Email": "yenpureshounak@gmail.com"
+                },
+                {
+                    "Name": "SHREYA MANOJ PHARATE",
+                    "Email": "shreyapharate44@gmail.com"
+                },
+                {
+                    "Name": "SHREYAS PRAVIN HARAL",
+                    "Email": "spkulkarni2009@gmail.com"
+                },
+                {
+                    "Name": "SHREYASH VIJAY KHOPADE",
+                    "Email": "shreyashkhopade05@gmail.com"
+                },
+                {
+                    "Name": "SHRUTESH MAROTI RAJOLE",
+                    "Email": "sumitrajole125@gmail.com"
+                },
+                {
+                    "Name": "SHRUTIKA SHRIKANT PISARWEKAR",
+                    "Email": "shrutikapisarwekar@gmail.com"
+                },
+                {
+                    "Name": "SRUSHTI DILIP PATIL",
+                    "Email": "srushitipati233@gmail.com"
+                },
+                {
+                    "Name": "SRUSHTI MAHESH BAVDHANKAR",
+                    "Email": "bavdhankarsrushti@gmail.com"
+                },
+                {
+                    "Name": "TANAY RUPESH JADHAV",
+                    "Email": "jadhavtanay927@gmail.com"
+                },
+                {
+                    "Name": "TANAYA SHRIKANT RATHI",
+                    "Email": "tanayarathi06@gmail.com"
+                },
+                {
+                    "Name": "VARUNI VISHAL HUDDAR",
+                    "Email": "Varunihuddar@gmail.com"
+                },
+                {
+                    "Name": "YASH DEVIDAS CHAVAN",
+                    "Email": "yc324382@gmail.com"
+                },
+                {
+                    "Name": "YASH SANDEEP KHEDEKAR",
+                    "Email": "yashkhedakar787@gmail.com"
+                },
+                {
+                    "Name": "YASHRAJ ARJUN RANDHAVE",
+                    "Email": "yashrajrandhave82@gmail.com"
+                },
+                {
+                    "Name": "YASHRAJ MEGHASHYAM DESHMUKH",
+                    "Email": "yashrajd13307@gmail.com"
+                },
+                {
+                    "Name": "YUVRAJ KAILAS KANADE",
+                    "Email": "kanadeyuvraj40@gmail.com"
+                }
+            ]
+        }
+    }
+}

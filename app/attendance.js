@@ -81,14 +81,17 @@ export default function AttendanceScreen() {
 
             // Load existing attendance or default to all present
             const savedAttendance = await getAttendance(date, branch, subject, batch);
-            if (savedAttendance) {
-                setAttendance(savedAttendance);
-            } else {
-                const initialAttendance = {};
-                normalizedStudents.forEach(s => {
-                    initialAttendance[s.rollNo] = true; // Default present
-                });
-                setAttendance(initialAttendance);
+            const initialAttendance = savedAttendance || {};
+            
+            // For any student not in saved attendance (e.g. newly added), default to present (true)
+            normalizedStudents.forEach(s => {
+                if (initialAttendance[s.rollNo] === undefined) {
+                    initialAttendance[s.rollNo] = true; 
+                }
+            });
+
+            setAttendance(initialAttendance);
+            if (!savedAttendance) {
                 saveAttendance(date, branch, subject, batch, initialAttendance);
             }
         } catch (error) {

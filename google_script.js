@@ -9,7 +9,9 @@ function doPost(e) {
 
         // 2. Open Sheet
         const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sheetName = data.branch; // Using branch name directly, e.g., "Computer_Engineering"
+        // Sanitize name: Remove special characters and limit length
+        const rawName = `${data.branch}_${data.subject}`;
+        const sheetName = rawName.replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 31);
         let sheet = ss.getSheetByName(sheetName);
 
         // 3. Create Sheet if missing (Only for submit)
@@ -58,14 +60,14 @@ function doPost(e) {
 
         const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
+        const compositeHeader = data.date; // Back to just date, since Subject is now in the Tab Name
         let dateColIndex = -1;
         let totalColIndex = -1;
         let percColIndex = -1;
 
         for (let i = 0; i < headers.length; i++) {
             const h = headers[i];
-            // Use helper to compare dates robustly
-            if (isSameDate(h, data.date)) dateColIndex = i + 1;
+            if (h === compositeHeader) dateColIndex = i + 1;
             if (h === "Total Lectures") totalColIndex = i + 1;
             if (h === "Percentage") percColIndex = i + 1;
         }
@@ -104,7 +106,7 @@ function doPost(e) {
                 dateColIndex = totalColIndex;
                 totalColIndex++;
                 percColIndex++;
-                sheet.getRange(1, dateColIndex).setValue(data.date).setFontWeight("bold");
+                sheet.getRange(1, dateColIndex).setValue(compositeHeader).setFontWeight("bold");
             }
 
             // 7. Write Data (SKIP for delete)
