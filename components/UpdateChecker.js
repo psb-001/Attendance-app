@@ -89,7 +89,7 @@ export default function UpdateChecker() {
                         
                         <View style={styles.progressBarContainer}>
                             <View style={[styles.progressBar, { width: downloading ? '70%' : '30%' }]} />
-                        </Animated.View>
+                        </View>
                     </View>
                 </Animated.View>
             </View>
