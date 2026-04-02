@@ -3,11 +3,43 @@ import { PaperProvider, MD3LightTheme, MD3DarkTheme, configureFonts } from 'reac
 import { useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState, useContext } from 'react';
-import { View, ActivityIndicator, useColorScheme, Platform } from 'react-native';
+import React, { useEffect, useState, useContext, Component } from 'react';
+import { View, ActivityIndicator, useColorScheme, Platform, StyleSheet } from 'react-native';
+import { Text, Button } from 'react-native-paper';
 import UpdateChecker from '../components/UpdateChecker';
 import { supabase } from '../lib/supabase';
 import { ThemeProvider, ThemeContext } from '../context/ThemeContext';
+
+class ErrorBoundary extends Component {
+    state = { hasError: false, error: null };
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+    componentDidCatch(error, errorInfo) {
+        console.error("FATAL UI ERROR:", error, errorInfo);
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <View style={errorStyles.container}>
+                    <Text variant="headlineMedium" style={errorStyles.title}>Orion Encountered an Error</Text>
+                    <Text style={errorStyles.errorText}>{this.state.error?.toString()}</Text>
+                    <Button mode="contained" onPress={() => { /* Reload logic if possible */ }} style={errorStyles.button}>
+                        Try Again
+                    </Button>
+                </View>
+            );
+        }
+        return this.props.children;
+    }
+}
+
+const errorStyles = StyleSheet.create({
+    container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000', padding: 20 },
+    title: { color: '#fff', fontWeight: 'bold', marginBottom: 12 },
+    errorText: { color: '#aaa', textAlign: 'center', marginBottom: 24 },
+    button: { backgroundColor: '#3d637e' }
+});
 
 const fontConfig = {
     fontFamily: 'PlusJakartaSans_400Regular',
@@ -63,9 +95,11 @@ export default function Layout() {
     if (!fontsLoaded) return null;
 
     return (
-        <ThemeProvider>
-            <RootLayoutNav />
-        </ThemeProvider>
+        <ErrorBoundary>
+            <ThemeProvider>
+                <RootLayoutNav />
+            </ThemeProvider>
+        </ErrorBoundary>
     );
 }
 
@@ -77,13 +111,27 @@ function RootLayoutNav() {
     const [session, setSession] = useState(null);
     const [role, setRole] = useState(null);
     const [authReady, setAuthReady] = useState(false);
+    const [initError, setInitError] = useState(null);
+
     useEffect(() => {
-        // 1. Initial sense of session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            console.log("Layout: Initial session fetch:", session?.user?.id || "Null");
-            setSession(session);
-            setAuthReady(true);
-        });
+        const init = async () => {
+            try {
+                // 1. Initial sense of session
+                const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) throw sessionError;
+                
+                console.log("Layout: Initial session fetch:", initialSession?.user?.id || "Null");
+                setSession(initialSession);
+            } catch (err) {
+                console.error("Initialization Error:", err);
+                setInitError(err.message);
+            } finally {
+                setAuthReady(true);
+            }
+        };
+
+        init();
 
         // 2. Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -99,6 +147,7 @@ function RootLayoutNav() {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#000000' : '#f9f9fe' }}>
                 <ActivityIndicator size="large" color={isDark ? '#ffffff' : '#3d637e'} />
+                {initError && <Text style={{ color: 'red', marginTop: 10 }}>{initError}</Text>}
             </View>
         );
     }

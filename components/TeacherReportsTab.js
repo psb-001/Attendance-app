@@ -40,7 +40,7 @@ export default function TeacherReportsTab({ profile }) {
             // Fetch logs. If teacher has a branch assigned, filter by it.
             let query = supabase
                 .from('attendance_logs')
-                .select('subject, branch, batch, roll_no, status')
+                .select('subject, branch, roll_no, status')
                 .eq('date', queryDate);
             
             if (profile?.branch) {

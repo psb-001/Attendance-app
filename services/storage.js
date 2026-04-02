@@ -33,12 +33,6 @@ export const getAttendance = async (date, branch, subject, batch = null) => {
             .eq('date', date)
             .eq('branch', branch)
             .eq('subject', subject);
-        
-        if (batch) {
-            query = query.eq('batch', batch);
-        } else {
-            query = query.is('batch', null);
-        }
 
         const { data, error } = await query;
         if (!error && data && data.length > 0) {
@@ -75,12 +69,6 @@ export const isSubmitted = async (date, branch, subject, batch = null) => {
             .eq('date', date)
             .eq('branch', branch)
             .eq('subject', subject);
-        
-        if (batch) {
-            query = query.eq('batch', batch);
-        } else {
-            query = query.is('batch', null);
-        }
 
         const { count, error } = await query;
         if (!error && count !== null && count > 0) {
@@ -112,12 +100,6 @@ export const resetSubmission = async (date, branch, subject, batch = null) => {
             .eq('date', date)
             .eq('branch', branch)
             .eq('subject', subject);
-
-        if (batch) {
-            query = query.eq('batch', batch);
-        } else {
-            query = query.is('batch', null);
-        }
         await query;
     } catch (e) {
         console.error('Failed to reset submission status', e);
