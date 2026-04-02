@@ -14,6 +14,8 @@ import TeacherReportsTab from '../components/TeacherReportsTab';
 import TeacherSubjectsTab from '../components/TeacherSubjectsTab';
 import { generateMonthDays, getInitials } from '../utils/dashboardHelpers';
 import AppHeader from '../components/AppHeader';
+import EmptyState from '../components/EmptyState';
+
 
 export default function HomeScreen() {
     const router = useRouter();
