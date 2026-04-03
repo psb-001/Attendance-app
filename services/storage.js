@@ -63,6 +63,20 @@ export const markAsSubmitted = async (date, branch, subject, batch = null) => {
 
 export const isSubmitted = async (date, branch, subject, batch = null) => {
     try {
+        const key = `${getAttendanceKey(date, branch, subject, batch)}_submitted`;
+        const localValue = await AsyncStorage.getItem(key);
+
+        // If teacher explicitly reset, trust that — don't check Supabase
+        if (localValue === 'reset') {
+            return false;
+        }
+
+        // If locally marked as submitted, trust that
+        if (localValue === 'true') {
+            return true;
+        }
+
+        // No local state — check Supabase as fallback (e.g. after app reinstall)
         let query = supabase
             .from('attendance_logs')
             .select('id', { head: true, count: 'exact' })
@@ -72,15 +86,11 @@ export const isSubmitted = async (date, branch, subject, batch = null) => {
 
         const { count, error } = await query;
         if (!error && count !== null && count > 0) {
-            // Sync local cache
-            const key = `${getAttendanceKey(date, branch, subject, batch)}_submitted`;
             await AsyncStorage.setItem(key, 'true');
             return true;
         }
 
-        const key = `${getAttendanceKey(date, branch, subject, batch)}_submitted`;
-        const value = await AsyncStorage.getItem(key);
-        return value === 'true';
+        return false;
     } catch (e) {
         console.error('Failed to check submission status', e);
         return false;
@@ -91,16 +101,11 @@ export const resetSubmission = async (date, branch, subject, batch = null) => {
     try {
         const baseKey = getAttendanceKey(date, branch, subject, batch);
         const submittedKey = `${baseKey}_submitted`;
-        await AsyncStorage.removeItem(submittedKey);
-        await AsyncStorage.removeItem(baseKey);
+        // Set to 'reset' so isSubmitted knows this was explicitly reset
+        // and won't override it by checking Supabase
+        await AsyncStorage.setItem(submittedKey, 'reset');
 
-        let query = supabase
-            .from('attendance_logs')
-            .delete()
-            .eq('date', date)
-            .eq('branch', branch)
-            .eq('subject', subject);
-        await query;
+        // Keep attendance data intact — teacher will edit and re-submit
     } catch (e) {
         console.error('Failed to reset submission status', e);
     }

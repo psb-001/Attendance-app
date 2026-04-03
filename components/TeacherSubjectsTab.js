@@ -17,10 +17,19 @@ export default function TeacherSubjectsTab({ profile }) {
     const fetchSubjectStats = async () => {
         setLoading(true);
         try {
-            // Fetch all logs for this teacher's branch
+            // Short-circuit if no subjects assigned
+            if (!profile?.subjects || profile.subjects.length === 0) {
+                setLoading(false);
+                return;
+            }
+
+            // Fetch all logs for this teacher's branch and assigned subjects
             let query = supabase
                 .from('attendance_logs')
-                .select('subject, roll_no, status, date');
+                .select('subject, branch, roll_no, status, date');
+            
+            // SECURITY: Filter by assigned subjects
+            query = query.in('subject', profile.subjects);
             
             if (profile?.branch) {
                 query = query.eq('branch', profile.branch);
@@ -40,20 +49,22 @@ export default function TeacherSubjectsTab({ profile }) {
             const studentStats = {};
 
             data.forEach(log => {
+                const subjectKey = `${log.subject}|${log.branch}`;
                 // Subject metrics
-                if (!stats[log.subject]) {
-                    stats[log.subject] = { present: 0, total: 0, classesHeld: new Set() };
+                if (!stats[subjectKey]) {
+                    stats[subjectKey] = { subject: log.subject, branch: log.branch, present: 0, total: 0, classesHeld: new Set() };
                 }
-                stats[log.subject].total += 1;
-                stats[log.subject].classesHeld.add(log.date);
-                if (log.status === 1) stats[log.subject].present += 1;
+                stats[subjectKey].total += 1;
+                stats[subjectKey].classesHeld.add(log.date);
+                if (log.status === 1) stats[subjectKey].present += 1;
 
                 // Student metrics
-                if (!studentStats[log.roll_no]) {
-                    studentStats[log.roll_no] = { present: 0, total: 0 };
+                const studentKey = `${log.branch}_${log.roll_no}`;
+                if (!studentStats[studentKey]) {
+                    studentStats[studentKey] = { branch: log.branch, roll_no: log.roll_no, present: 0, total: 0 };
                 }
-                studentStats[log.roll_no].total += 1;
-                if (log.status === 1) studentStats[log.roll_no].present += 1;
+                studentStats[studentKey].total += 1;
+                if (log.status === 1) studentStats[studentKey].present += 1;
             });
 
             // Convert Subject Set to number length
@@ -65,13 +76,13 @@ export default function TeacherSubjectsTab({ profile }) {
 
             // Find low attendance students (< 75%)
             const lowAttendees = [];
-            Object.keys(studentStats).forEach(roll => {
-                const s = studentStats[roll];
-                // Only consider students who have had at least 5 total classes recorded to avoid early-semester noise
-                if (s.total >= 5) {
+            Object.keys(studentStats).forEach(key => {
+                const s = studentStats[key];
+                // Only consider students who have had at least 3 total classes recorded to avoid early-semester noise
+                if (s.total >= 3) {
                     const pct = Math.round((s.present / s.total) * 100);
                     if (pct < 75) {
-                        lowAttendees.push({ roll_no: roll, pct, present: s.present, total: s.total });
+                        lowAttendees.push({ roll_no: s.roll_no, branch: s.branch, pct, present: s.present, total: s.total });
                     }
                 }
             });
@@ -115,12 +126,13 @@ export default function TeacherSubjectsTab({ profile }) {
             <Text style={[styles.sectionSub, { color: t('#91939c', '#aeafb4'), marginBottom: 20 }]}>Global attendance metrics across your classes</Text>
 
             <View style={styles.statsGrid}>
-                {Object.keys(subjectStats).map((subject, idx) => {
-                    const stat = subjectStats[subject];
+                {Object.keys(subjectStats).map((subjectKey, idx) => {
+                    const stat = subjectStats[subjectKey];
                     const pct = Math.round((stat.present / stat.total) * 100);
                     return (
                         <View key={idx} style={[styles.statCard, { backgroundColor: t('#ffffff', '#1e1e1e'), borderColor: t('#e2e8f0', '#333') }]}>
-                            <Text style={[styles.subjectName, { color: t('#1a1a2e', '#ffffff') }]}>{subject}</Text>
+                            <Text style={[styles.subjectName, { color: t('#1a1a2e', '#ffffff') }]} numberOfLines={2}>{stat.subject}</Text>
+                            <Text style={{ fontSize: 10, color: t('#64748b', '#94a3b8'), marginTop: 2, fontWeight: 'bold' }}>{stat.branch}</Text>
                             <Text style={{ fontSize: 12, color: t('#64748b', '#94a3b8'), marginTop: 4 }}>
                                 {stat.totalClassesHeld} Classes Held
                             </Text>
@@ -145,7 +157,10 @@ export default function TeacherSubjectsTab({ profile }) {
                             <View key={idx} style={[styles.lowAttendeeRow, { borderBottomColor: t('#f1f5f9', '#333'), borderBottomWidth: idx < lowAttendanceStudents.length - 1 ? 1 : 0 }]}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                     <View style={[styles.alertDot, { backgroundColor: s.pct < 50 ? '#d32f2f' : '#f57c00' }]} />
-                                    <Text style={{ fontWeight: '600', color: t('#1a1a2e', '#ffffff'), marginLeft: 12 }}>Roll No {s.roll_no}</Text>
+                                    <View style={{ marginLeft: 12 }}>
+                                        <Text style={{ fontWeight: '600', color: t('#1a1a2e', '#ffffff') }}>Roll No {s.roll_no}</Text>
+                                        <Text style={{ fontSize: 10, color: t('#64748b', '#94a3b8') }}>{s.branch}</Text>
+                                    </View>
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
                                     <Text style={{ fontWeight: '900', color: s.pct < 50 ? '#d32f2f' : '#f57c00' }}>{s.pct}%</Text>

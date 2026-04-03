@@ -6,22 +6,23 @@ CREATE TABLE IF NOT EXISTS public.subjects (
     name TEXT NOT NULL UNIQUE,
     type TEXT CHECK (type IN ('THEORY', 'PRACTICAL', 'OTHER')),
     icon TEXT DEFAULT 'book-outline',
-    accent_color TEXT DEFAULT '#3d637e'
+    accent_color TEXT DEFAULT '#3d637e',
+    resource_url TEXT
 );
 
 -- 2. Insert Default Subjects
-INSERT INTO public.subjects (name, type, icon, accent_color) VALUES
-('Mathematical 2', 'THEORY', 'calculator-variant', '#6C5CE7'),
-('Chemistry', 'THEORY', 'flask-outline', '#00B894'),
-('Engineering mechanics', 'THEORY', 'cog-outline', '#E17055'),
-('PPS', 'THEORY', 'code-tags', '#0984E3'),
-('Communication skills', 'THEORY', 'microphone-outline', '#FDCB6E'),
-('Engineering mechanics lab', 'PRACTICAL', 'cog-outline', '#E17055'),
-('Communication skills lab', 'PRACTICAL', 'microphone-variant', '#FDCB6E'),
-('Chemistry lab', 'PRACTICAL', 'flask', '#00B894'),
-('Mathematical 2 lab', 'PRACTICAL', 'calculator-variant', '#6C5CE7'),
-('PPS lab', 'PRACTICAL', 'code-tags-check', '#0984E3'),
-('workshop lab', 'PRACTICAL', 'hammer-wrench', '#E84393')
+INSERT INTO public.subjects (name, type, icon, accent_color, resource_url) VALUES
+('Mathematical 2', 'THEORY', 'calculator-variant', '#6C5CE7', 'https://drive.google.com/drive/folders/placeholder_m2'),
+('Chemistry', 'THEORY', 'flask-outline', '#00B894', 'https://drive.google.com/drive/folders/placeholder_chemistry'),
+('Engineering mechanics', 'THEORY', 'cog-outline', '#E17055', 'https://drive.google.com/drive/folders/placeholder_em'),
+('PPS', 'THEORY', 'code-tags', '#0984E3', 'https://drive.google.com/drive/folders/placeholder_pps'),
+('Communication skills', 'THEORY', 'microphone-outline', '#FDCB6E', 'https://drive.google.com/drive/folders/placeholder_cs'),
+('Engineering mechanics lab', 'PRACTICAL', 'cog-outline', '#E17055', 'https://drive.google.com/drive/folders/placeholder_em_lab'),
+('Communication skills lab', 'PRACTICAL', 'microphone-variant', '#FDCB6E', 'https://drive.google.com/drive/folders/placeholder_cs_lab'),
+('Chemistry lab', 'PRACTICAL', 'flask', '#00B894', 'https://drive.google.com/drive/folders/placeholder_chemistry_lab'),
+('Mathematical 2 lab', 'PRACTICAL', 'calculator-variant', '#6C5CE7', 'https://drive.google.com/drive/folders/placeholder_m2_lab'),
+('PPS lab', 'PRACTICAL', 'code-tags-check', '#0984E3', 'https://drive.google.com/drive/folders/placeholder_pps_lab'),
+('workshop lab', 'PRACTICAL', 'hammer-wrench', '#E84393', 'https://drive.google.com/drive/folders/placeholder_workshop_lab')
 ON CONFLICT (name) DO NOTHING;
 
 -- 3. Enable RLS on all tables

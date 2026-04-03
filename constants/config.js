@@ -1,7 +1,3 @@
-// Single Google Apps Script Web App URL for ALL subjects
-// Deploy google_script.js as a Web App and paste the URL here
-export const GOOGLE_SCRIPT_URL = ''; // TODO: Add your deployed Google Script URL here
-
 // Placeholder Google Drive links for subjects
 export const SUBJECT_RESOURCES = {
     'Mathematical 2': 'https://drive.google.com/drive/folders/placeholder_m2',

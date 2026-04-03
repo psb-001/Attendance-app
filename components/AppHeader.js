@@ -40,7 +40,10 @@ export default function AppHeader({
                 style={{ margin: 0 }}
             />
             
-            <Text variant="titleMedium" style={[styles.headerTitle, { color: t('#3d637e', '#ffffff') }]}>
+            <Text variant="titleMedium" style={[
+                styles.headerTitle, 
+                { color: roleTitle === 'ADMIN DASHBOARD' ? t('#E17055', '#FF7F50') : t('#3d637e', '#ffffff') }
+            ]}>
                 {getTitle()}
             </Text>
             

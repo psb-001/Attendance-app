@@ -50,6 +50,8 @@ export default function Login() {
                 
                 if (profile?.role === 'student') {
                     router.replace('/student-dashboard');
+                } else if (profile?.role === 'admin') {
+                    router.replace('/admin-dashboard');
                 } else {
                     router.replace('/');
                 }
@@ -89,6 +91,8 @@ export default function Login() {
                     
                     if (!profile || profile?.role === 'student') {
                         router.replace('/student-dashboard');
+                    } else if (profile?.role === 'admin') {
+                        router.replace('/admin-dashboard');
                     } else {
                         router.replace('/');
                     }

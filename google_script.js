@@ -9,10 +9,23 @@ function doPost(e) {
 
         // 2. Open Sheet
         const ss = SpreadsheetApp.getActiveSpreadsheet();
-        // Sanitize name: Remove special characters and limit length
-        const rawName = `${data.branch}_${data.subject}`;
-        const sheetName = rawName.replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 31);
+        
+        // Map branch to specific abbreviations
+        let shortBranch = data.branch;
+        if (data.branch.includes('AI') || data.branch.includes('ML')) shortBranch = 'AIML';
+        else if (data.branch.includes('Computer')) shortBranch = 'CE';
+        else if (data.branch.includes('Information')) shortBranch = 'IT';
+        else if (data.branch.includes('Electronic') || data.branch.includes('Telecommunication') || data.branch.includes('ENTC')) shortBranch = 'ENTC';
+        else shortBranch = data.branch.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
+
+        // Make tab name shorter: "Chemistry - AIML"
+        const cleanSubject = data.subject.replace(/[^a-zA-Z0-9 ]/g, '');
+        const sheetName = `${cleanSubject} - ${shortBranch}`.substring(0, 31);
+        
         let sheet = ss.getSheetByName(sheetName);
+
+        // Header Row Index (shifted down because of title rows)
+        const HEADER_ROW = 4;
 
         // 3. Create Sheet if missing (Only for submit)
         if (!sheet) {
@@ -20,11 +33,19 @@ function doPost(e) {
                 return createJSONOutput('success', 'Sheet not found');
             }
             sheet = ss.insertSheet(sheetName);
-            sheet.getRange(1, 1).setValue("Roll No").setFontWeight("bold");
-            sheet.getRange(1, 2).setValue("Name").setFontWeight("bold");
-            sheet.getRange(1, 3).setValue("Total Lectures").setFontWeight("bold").setBackground("yellow");
-            sheet.getRange(1, 4).setValue("Percentage").setFontWeight("bold").setBackground("yellow");
-            sheet.setFrozenRows(1);
+            
+            // Add Title Rows at the top
+            sheet.getRange(1, 1).setValue(`Branch: ${data.branch}`).setFontWeight("bold").setFontSize(14).setFontColor("#3d637e");
+            sheet.getRange(2, 1).setValue(`Subject: ${data.subject}`).setFontWeight("bold").setFontSize(12).setFontColor("#555555");
+            
+            // Add Table Headers at Row 4
+            sheet.getRange(HEADER_ROW, 1).setValue("Roll No").setFontWeight("bold").setBackground("#f0f0f0");
+            sheet.getRange(HEADER_ROW, 2).setValue("Name").setFontWeight("bold").setBackground("#f0f0f0");
+            sheet.getRange(HEADER_ROW, 3).setValue("Total Lectures").setFontWeight("bold").setBackground("yellow");
+            sheet.getRange(HEADER_ROW, 4).setValue("Percentage").setFontWeight("bold").setBackground("yellow");
+            
+            // Freeze rows up to HEADER_ROW, freeze first 2 columns
+            sheet.setFrozenRows(HEADER_ROW);
             sheet.setFrozenColumns(2);
         }
 
@@ -32,11 +53,12 @@ function doPost(e) {
         const lastRow = sheet.getLastRow();
         const rollNoMap = {};
 
-        if (lastRow > 1) {
-            const rollVals = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+        // Read all roll numbers starting AFTER the header row
+        if (lastRow > HEADER_ROW) {
+            const rollVals = sheet.getRange(HEADER_ROW + 1, 1, lastRow - HEADER_ROW, 1).getValues();
             for (let i = 0; i < rollVals.length; i++) {
                 const rNo = rollVals[i][0];
-                if (rNo) rollNoMap[rNo] = i + 2;
+                if (rNo) rollNoMap[rNo] = i + HEADER_ROW + 1;
             }
         }
 
@@ -55,93 +77,90 @@ function doPost(e) {
 
         // 6. Handle Columns (Find indices)
         const lastCol = sheet.getLastColumn();
-        // Guard against empty sheet
         if (lastCol === 0) return createJSONOutput('error', 'Sheet is empty');
 
-        const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+        const headers = sheet.getRange(HEADER_ROW, 1, 1, lastCol).getValues()[0];
 
-        const compositeHeader = data.date; // Back to just date, since Subject is now in the Tab Name
+        const compositeHeader = data.date; 
         let dateColIndex = -1;
         let totalColIndex = -1;
         let percColIndex = -1;
 
         for (let i = 0; i < headers.length; i++) {
             const h = headers[i];
-            if (h === compositeHeader) dateColIndex = i + 1;
-            if (h === "Total Lectures") totalColIndex = i + 1;
-            if (h === "Percentage") percColIndex = i + 1;
+            const headerStr = (h instanceof Date) 
+                ? Utilities.formatDate(h, ss.getSpreadsheetTimeZone(), "yyyy-MM-dd") 
+                : String(h);
+            if (headerStr === compositeHeader) dateColIndex = i + 1;
+            if (headerStr === "Total Lectures") totalColIndex = i + 1;
+            if (headerStr === "Percentage") percColIndex = i + 1;
         }
 
-        // Recover missing standard columns (if accidental deletion)
+        // Recover missing standard columns
         if (totalColIndex == -1) {
             totalColIndex = sheet.getLastColumn() + 1;
-            sheet.getRange(1, totalColIndex).setValue("Total Lectures").setBackground("yellow");
+            sheet.getRange(HEADER_ROW, totalColIndex).setValue("Total Lectures").setBackground("yellow");
         }
         if (percColIndex == -1) {
             percColIndex = totalColIndex + 1;
-            sheet.getRange(1, percColIndex).setValue("Percentage").setBackground("yellow");
+            sheet.getRange(HEADER_ROW, percColIndex).setValue("Percentage").setBackground("yellow");
         }
 
         // --- HANDLE DELETE ACTION ---
         if (action === 'delete') {
             if (dateColIndex > -1) {
                 sheet.deleteColumn(dateColIndex);
-
-                // Adjust indices: if we deleted a column to the left of Total, Total shifts left
                 if (dateColIndex < totalColIndex) {
                     totalColIndex--;
                     percColIndex--;
                 }
-
-                // We do NOT return here. We proceed to Step 8 to update formulas.
             } else {
                 return createJSONOutput('success', 'Date column not found, nothing to delete');
             }
         }
         // --- HANDLE SUBMIT ACTION ---
         else {
-            // Insert NEW Date Column if needed
             if (dateColIndex == -1) {
                 sheet.insertColumnBefore(totalColIndex);
                 dateColIndex = totalColIndex;
                 totalColIndex++;
                 percColIndex++;
-                sheet.getRange(1, dateColIndex).setValue(compositeHeader).setFontWeight("bold");
+                sheet.getRange(HEADER_ROW, dateColIndex).setValue(compositeHeader).setFontWeight("bold");
             }
 
-            // 7. Write Data (SKIP for delete)
+            // 7. Write Data with Colors (SKIP for delete)
             if (data.studentStatuses) {
                 data.studentStatuses.forEach(student => {
                     const row = rollNoMap[student.rollNo];
                     if (row) {
-                        sheet.getRange(row, dateColIndex).setValue(student.status);
+                        const cell = sheet.getRange(row, dateColIndex);
+                        cell.setValue(student.status);
+                        
+                        // Add green/red styling directly to the cell block
+                        if (student.status === 1) {
+                            cell.setBackground("#a5d6a7"); // Solid Light Green
+                        } else {
+                            cell.setBackground("#ef9a9a"); // Solid Light Red
+                        }
                     }
                 });
             }
         }
 
         // 8. Update Formulas for Total & Percentage
-        // (We run this for BOTH submit and delete to ensure accuracy)
-
         const startColLetter = "C";
-        // The data range ends at (TotalColumn - 1)
-        // If TotalColumn is 3 (C), then data range is empty (invalid). 
-        // We check if we have any data columns.
-
-        if (totalColIndex > 3) { // Means we have at least 1 date column (at index 3 or more)
+        if (totalColIndex > 3) {
             const endColLetter = columnToLetter(totalColIndex - 1);
             const totalColLetter = columnToLetter(totalColIndex);
 
             const rowsToUpdate = Object.values(rollNoMap);
             rowsToUpdate.forEach(r => {
                 const range = `${startColLetter}${r}:${endColLetter}${r}`;
-
                 sheet.getRange(r, totalColIndex).setFormula(`=COUNTIF(${range}, 1)`);
                 sheet.getRange(r, percColIndex).setFormula(`=IFERROR((${totalColLetter}${r} / COUNTA(${range})) * 100, 0)`);
                 sheet.getRange(r, percColIndex).setNumberFormat("0.00");
             });
         } else {
-            // No date columns left (all deleted). Reset Total/Perc to 0.
             const rowsToUpdate = Object.values(rollNoMap);
             rowsToUpdate.forEach(r => {
                 sheet.getRange(r, totalColIndex).setValue(0);

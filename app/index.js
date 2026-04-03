@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef, useContext } from 'react';
-import { View, StyleSheet, ScrollView, Image, ActivityIndicator, FlatList, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, ActivityIndicator, FlatList, TouchableOpacity, Platform, RefreshControl } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
 import { Text, Surface, IconButton, FAB, Portal, Modal, TextInput, Button } from 'react-native-paper';
 import { useRouter } from 'expo-router';
@@ -20,6 +20,7 @@ import EmptyState from '../components/EmptyState';
 export default function HomeScreen() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [profile, setProfile] = useState(null);
     const [activeTab, setActiveTab] = useState('home');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -91,65 +92,35 @@ export default function HomeScreen() {
                 console.log("Teacher Dashboard: User is a student, redirecting...");
                 router.replace('/student-dashboard');
                 return;
+            } else if (profile.role === 'admin') {
+                console.log("Teacher Dashboard: User is an admin, redirecting...");
+                router.replace('/admin-dashboard');
+                return;
             }
 
             setProfile(profile);
 
-            // Define the 11 "Actual" base subjects
-            const baseSubjects = [
-                { name: 'Engineering mechanics', type: 'THEORY' },
-                { name: 'Communication skills', type: 'THEORY' },
-                { name: 'Chemistry', type: 'THEORY' },
-                { name: 'Mathematical 2', type: 'THEORY' },
-                { name: 'PPS', type: 'THEORY' },
-                { name: 'Engineering mechanics lab', type: 'PRACTICAL' },
-                { name: 'Communication skills lab', type: 'PRACTICAL' },
-                { name: 'Chemistry lab', type: 'PRACTICAL' },
-                { name: 'Mathematical 2 lab', type: 'PRACTICAL' },
-                { name: 'PPS lab', type: 'PRACTICAL' },
-                { name: 'workshop lab', type: 'PRACTICAL' }
-            ];
-
-            // Fetch all subjects from the global subjects table
+            // Fetch ALL subjects from Supabase (single source of truth)
             const { data: dbSubjects, error: dbSubjectsError } = await supabase
                 .from('subjects')
                 .select('*')
                 .order('name');
             
             if (dbSubjectsError) {
-                console.warn("Supabase fetch failed, using internal fallback:", dbSubjectsError.message);
+                console.warn("Subjects fetch failed:", dbSubjectsError.message);
             }
 
             const safeDbSubjects = dbSubjects || [];
             
-            // Merge base subjects with DB subjects to get IDs if they exist
-            let finalSubjects = baseSubjects.map(base => {
-                const dbMatch = safeDbSubjects.find(s => s.name === base.name);
-                return dbMatch ? { ...base, ...dbMatch } : base;
-            });
-
-            // If teacher has specific subjects assigned, filter the list
+            // If teacher has specific subjects assigned, filter the DB list
             const assignedSubjects = profileData?.subjects || [];
+            let finalSubjects;
             if (assignedSubjects.length > 0) {
-                // Map old/short codes to the new full names for filtering
-                const nameNormalization = (n) => {
-                    if (!n) return '';
-                    const low = n.toLowerCase();
-                    if (low === 'm2') return 'Mathematical 2';
-                    if (low === 'em') return 'Engineering mechanics';
-                    if (low === 'cs') return 'Communication skills';
-                    if (low === 'workshop') return 'workshop lab';
-                    return n;
-                };
-
-                const normalizedAssignments = assignedSubjects.map(nameNormalization);
-                finalSubjects = finalSubjects.filter(s => normalizedAssignments.includes(s.name));
+                finalSubjects = safeDbSubjects.filter(s => assignedSubjects.includes(s.name));
+            } else {
+                // No assignment yet — show all subjects from DB (admin will assign later)
+                finalSubjects = safeDbSubjects;
             }
-
-            // Safety: if filtering leaves nothing, show all 11
-            if (finalSubjects.length === 0) finalSubjects = baseSubjects;
-            
-            setSubjects(finalSubjects);
             
             setSubjects(finalSubjects);
         } catch (err) {
@@ -160,6 +131,12 @@ export default function HomeScreen() {
             setLoading(false);
         }
     };
+
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await loadProfile();
+        setRefreshing(false);
+    }, []);
 
     const handleAttendance = (subject) => {
         // Build correctly formatted YYYY-MM-DD string without timezone shifts
@@ -211,7 +188,18 @@ export default function HomeScreen() {
                 onAvatarPress={() => setActiveTab('profile')}
                 roleTitle="TEACHER DASHBOARD"
             />
-            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+                contentContainerStyle={styles.container} 
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl 
+                        refreshing={refreshing} 
+                        onRefresh={onRefresh} 
+                        tintColor={isDark ? '#3d637e' : '#3d637e'} 
+                        colors={['#3d637e']} 
+                    />
+                }
+            >
                 {activeTab === 'home' && (
                     <>
                         <View style={styles.greetingSection}>
@@ -250,6 +238,8 @@ export default function HomeScreen() {
                             subject={sub.name}
                             isDark={isDark}
                             onAttendance={handleAttendance}
+                            dbIcon={sub.icon}
+                            dbAccent={sub.accent_color}
                         />
                     )) : (
                         <EmptyState 

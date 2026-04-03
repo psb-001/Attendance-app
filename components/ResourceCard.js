@@ -18,19 +18,20 @@ const SUBJECT_META = {
     'Chemistry lab': { icon: 'flask', category: 'LAB', accent: '#00B894' },
 };
 
-const ResourceCard = ({ subject, isDark = false }) => {
-    const meta = useMemo(() => SUBJECT_META[subject] || {
-        icon: 'folder-open-outline',
-        category: 'RESOURCE',
-        accent: '#3d637e'
-    }, [subject]);
+const ResourceCard = ({ subject, url, isDark = false, dbIcon = null, dbAccent = null }) => {
+    const staticMeta = SUBJECT_META[subject] || {};
+    const meta = useMemo(() => ({
+        icon: dbIcon || staticMeta.icon || 'folder-open-outline',
+        category: staticMeta.category || 'RESOURCE',
+        accent: dbAccent || staticMeta.accent || '#3d637e'
+    }), [subject, dbIcon, dbAccent]);
 
     const handleOpenResources = async () => {
-        const url = SUBJECT_RESOURCES[subject];
-        if (url) {
-            const canOpen = await Linking.canOpenURL(url);
+        const finalUrl = url || SUBJECT_RESOURCES[subject];
+        if (finalUrl) {
+            const canOpen = await Linking.canOpenURL(finalUrl);
             if (canOpen) {
-                await Linking.openURL(url);
+                await Linking.openURL(finalUrl);
             }
         }
     };

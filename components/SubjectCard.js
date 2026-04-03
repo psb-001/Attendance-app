@@ -17,12 +17,13 @@ const SUBJECT_META = {
     'workshop lab': { icon: 'hammer-wrench', category: 'PRACTICAL', accent: '#E84393' },
 };
 
-const SubjectCard = ({ subject, onAttendance, isDark = false }) => {
-    const meta = useMemo(() => SUBJECT_META[subject] || {
-        icon: 'book-open-variant',
-        category: 'COURSE',
-        accent: '#3d637e'
-    }, [subject]);
+const SubjectCard = ({ subject, onAttendance, isDark = false, dbIcon = null, dbAccent = null }) => {
+    const staticMeta = SUBJECT_META[subject] || {};
+    const meta = useMemo(() => ({
+        icon: dbIcon || staticMeta.icon || 'book-open-variant',
+        category: staticMeta.category || 'COURSE',
+        accent: dbAccent || staticMeta.accent || '#3d637e'
+    }), [subject, dbIcon, dbAccent]);
 
     const t = (light, dark) => isDark ? dark : light;
 

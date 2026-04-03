@@ -37,18 +37,25 @@ export default function TeacherReportsTab({ profile }) {
         const queryDate = `${year}-${month}-${day}`;
 
         try {
+            // Check if teacher has any subjects assigned
+            if (!profile?.subjects || profile.subjects.length === 0) {
+                setLogs([]);
+                setLoading(false);
+                return;
+            }
+
             // Fetch logs. If teacher has a branch assigned, filter by it.
             let query = supabase
                 .from('attendance_logs')
                 .select('subject, branch, roll_no, status')
                 .eq('date', queryDate);
             
+            // Filter by subjects assigned to this teacher
+            query = query.in('subject', profile.subjects);
+            
             if (profile?.branch) {
                 query = query.eq('branch', profile.branch);
             }
-            
-            // NOTE: A more secure query would filter by classes THIS teacher actually teaches,
-            // but for now we'll fetch logs for the branch they are associated with.
 
             const { data, error: sbError } = await query;
             if (sbError) throw sbError;

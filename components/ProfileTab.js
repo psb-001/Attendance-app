@@ -1,8 +1,7 @@
-import { View, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator, TextInput as RNTextInput } from 'react-native';
-import { Text, Surface, IconButton, ActivityIndicator as PaperActivityIndicator } from 'react-native-paper';
+import { View, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import { Text, Surface, IconButton } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useContext, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { useContext } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
 import { getInitials } from '../utils/dashboardHelpers';
 
@@ -15,35 +14,10 @@ import { getInitials } from '../utils/dashboardHelpers';
  */
 export default function ProfileTab({ profile, onLogout, roleLabel = 'User' }) {
     const { isDark } = useContext(ThemeContext);
-    const [isEditingEmail, setIsEditingEmail] = useState(false);
-    const [newEmail, setNewEmail] = useState(profile?.email || '');
-    const [isUpdating, setIsUpdating] = useState(false);
 
     const t = (light, dark) => isDark ? dark : light;
 
-    const handleUpdateEmail = async () => {
-        if (!newEmail || newEmail === profile?.email) {
-            setIsEditingEmail(false);
-            return;
-        }
 
-        try {
-            setIsUpdating(true);
-            const { error } = await supabase.auth.updateUser({ email: newEmail });
-
-            if (error) throw error;
-
-            Alert.alert(
-                "Verification Sent",
-                "Please check your new email inbox to confirm the change. You will remain logged in with your current email until verified.",
-                [{ text: "OK", onPress: () => setIsEditingEmail(false) }]
-            );
-        } catch (err) {
-            Alert.alert("Update Failed", err.message);
-        } finally {
-            setIsUpdating(false);
-        }
-    };
 
     return (
         <View style={{ marginTop: 24, paddingBottom: 60 }}>
@@ -102,44 +76,9 @@ export default function ProfileTab({ profile, onLogout, roleLabel = 'User' }) {
                     <View style={styles.profileSettingTextContainer}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Text style={[styles.profileSettingLabel, { color: t('#5b5f68', '#aeafb4') }]}>Email Address</Text>
-                            {!isEditingEmail && (
-                                <TouchableOpacity onPress={() => setIsEditingEmail(true)}>
-                                    <MaterialCommunityIcons name="pencil" size={14} color={t('#3d637e', '#b8dffe')} />
-                                </TouchableOpacity>
-                            )}
                         </View>
                         
-                        {isEditingEmail ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                                <RNTextInput
-                                    value={newEmail}
-                                    onChangeText={setNewEmail}
-                                    style={{
-                                        flex: 1,
-                                        color: t('#2f333a', '#ffffff'),
-                                        fontSize: 15,
-                                        fontWeight: '800',
-                                        padding: 0,
-                                        borderBottomWidth: 1,
-                                        borderBottomColor: t('#3d637e', '#b8dffe')
-                                    }}
-                                    autoFocus
-                                    autoCapitalize="none"
-                                />
-                                <TouchableOpacity onPress={handleUpdateEmail} style={{ marginLeft: 12 }}>
-                                    {isUpdating ? (
-                                        <PaperActivityIndicator size={18} color="#3d637e" />
-                                    ) : (
-                                        <MaterialCommunityIcons name="check" size={20} color="#4caf50" />
-                                    )}
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setIsEditingEmail(false)} style={{ marginLeft: 12 }}>
-                                    <MaterialCommunityIcons name="close" size={20} color="#fa746f" />
-                                </TouchableOpacity>
-                            </View>
-                        ) : (
-                            <Text style={[styles.profileSettingValue, { color: t('#2f333a', '#ffffff') }]}>{profile?.email || 'N/A'}</Text>
-                        )}
+                        <Text style={[styles.profileSettingValue, { color: t('#2f333a', '#ffffff') }]}>{profile?.email || 'N/A'}</Text>
                     </View>
                 </View>
 

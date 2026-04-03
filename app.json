@@ -37,7 +37,7 @@
     },
     "updates": {
       "fallbackToCacheTimeout": 0,
-      "checkAutomatically": "OFF",
+      "checkAutomatically": "NEVER",
       "enabled": true,
       "url": "https://u.expo.dev/1bf8839e-0da4-4370-ba9d-eecffc897ce4"
     },

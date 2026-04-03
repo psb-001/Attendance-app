@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, StyleSheet, ScrollView, FlatList, ActivityIndicator, TouchableOpacity, Image, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, FlatList, ActivityIndicator, TouchableOpacity, Image, Platform, RefreshControl } from 'react-native';
 import { Text, Surface, IconButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
@@ -19,12 +19,14 @@ export default function StudentDashboard() {
     const [activeTab, setActiveTab] = useState('home');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [profile, setProfile] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date().getDate().toString());
     const [attendancePct, setAttendancePct] = useState(0);
     const [attendanceStats, setAttendanceStats] = useState({ present: 0, total: 0 });
     const [subjectAttendance, setSubjectAttendance] = useState({});
     const [allLogs, setAllLogs] = useState([]);
+    const [dbSubjects, setDbSubjects] = useState([]);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -82,14 +84,24 @@ export default function StudentDashboard() {
                 role: 'student' // fallback
             };
 
-            // Safety check: If a teacher lands here, send them to their dashboard
+            // Safety check: Route out non-students
             if (currentProfile.role === 'teacher') {
                 console.log("Student Dashboard: User is a teacher, redirecting...");
                 router.replace('/');
                 return;
+            } else if (currentProfile.role === 'admin') {
+                console.log("Student Dashboard: User is an admin, redirecting...");
+                router.replace('/admin-dashboard');
+                return;
             }
 
             setProfile(currentProfile);
+
+            // Fetch global subjects for resource URLs, icons, and colors
+            const { data: subData } = await supabase.from('subjects').select('name, resource_url, icon, accent_color, type');
+            if (subData) {
+                setDbSubjects(subData);
+            }
 
             // 2. If student has roll_no and branch, fetch real attendance
             if (profileData?.roll_no && profileData?.branch) {
@@ -121,6 +133,12 @@ export default function StudentDashboard() {
             setLoading(false);
         }
     };
+
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await init();
+        setRefreshing(false);
+    }, []);
 
     // getInitials imported from utils/dashboardHelpers
 
@@ -177,81 +195,16 @@ export default function StudentDashboard() {
         setSelectedDate('1');
     };
 
-    const rawSubjects = profile?.subjects && profile.subjects.length > 0 
-        ? profile.subjects 
-        : [
-            'Engineering mechanics', 
-            'Communication skills', 
-            'Chemistry', 
-            'Mathematical 2', 
-            'PPS', 
-            'Engineering mechanics lab', 
-            'Communication skills lab', 
-            'Chemistry lab', 
-            'Mathematical 2 lab', 
-            'PPS lab', 
-            'workshop lab'
-        ];
-
-    const normalizeSubject = (s) => {
-        if (!s) return s;
-        const n = s.trim();
-        const low = n.toLowerCase();
-        
-        if (low.includes('mathematical 2 lab')) return 'Mathematical 2 lab';
-        if (low === 'm2' || low === 'mathematical 2') return 'Mathematical 2';
-        
-        if (low.includes('communication skills lab')) return 'Communication skills lab';
-        if (low.includes('communication skills')) return 'Communication skills';
-        
-        if (low.includes('engineering mechanics lab')) return 'Engineering mechanics lab';
-        if (low.includes('engineering mechanics')) return 'Engineering mechanics';
-        
-        if (low.includes('pps lab')) return 'PPS lab';
-        if (low.includes('pps')) return 'PPS';
-        
-        if (low.includes('chemistry lab')) return 'Chemistry lab';
-        if (low.includes('chemistry')) return 'Chemistry';
-        
-        if (low.includes('workshop lab')) return 'workshop lab';
-        
-        return n;
-    };
-
-    let studentSubjects = rawSubjects.map(normalizeSubject);
-    
-    // Force inject the new practical subjects if they aren't saved in the user's Supabase profile yet
-    const requiredLabs = [
-        'Engineering mechanics lab', 
-        'Communication skills lab', 
-        'Chemistry lab', 
-        'Mathematical 2 lab', 
-        'PPS lab', 
-        'workshop lab'
-    ];
-    
-    requiredLabs.forEach(lab => {
-        if (!studentSubjects.includes(lab)) {
-            studentSubjects.push(lab);
-        }
-    });
-
-    const SUBJECT_META = {
-        'Mathematical 2': { icon: 'calculator-variant', category: 'THEORY', accent: '#6C5CE7' },
-        'Chemistry': { icon: 'flask-outline', category: 'THEORY', accent: '#00B894' },
-        'Engineering mechanics': { icon: 'cog-outline', category: 'THEORY', accent: '#E17055' },
-        'PPS': { icon: 'code-tags', category: 'THEORY', accent: '#0984E3' },
-        'Communication skills': { icon: 'microphone-outline', category: 'THEORY', accent: '#FDCB6E' },
-        'Mathematical 2 lab': { icon: 'calculator-variant', category: 'PRACTICAL', accent: '#6C5CE7' },
-        'PPS lab': { icon: 'code-tags-check', category: 'PRACTICAL', accent: '#0984E3' },
-        'Communication skills lab': { icon: 'microphone-variant', category: 'PRACTICAL', accent: '#FDCB6E' },
-        'workshop lab': { icon: 'hammer-wrench', category: 'PRACTICAL', accent: '#E84393' },
-        'Engineering mechanics lab': { icon: 'cog-outline', category: 'PRACTICAL', accent: '#E17055' },
-        'Chemistry lab': { icon: 'flask', category: 'PRACTICAL', accent: '#00B894' },
-    };
+    // Build subject list from student's assigned subjects (set by admin)
+    const studentSubjects = (profile?.subjects && profile.subjects.length > 0)
+        ? profile.subjects
+        : [];
 
     const renderSubjectItem = (subject, idx) => {
-        const meta = SUBJECT_META[subject] || { icon: 'book', accent: '#3d637e' };
+        const dbMeta = dbSubjects.find(d => d.name === subject) || {};
+        const accent = dbMeta.accent_color || '#3d637e';
+        const icon = dbMeta.icon || 'book-open-variant';
+        const category = dbMeta.type || 'COURSE';
         const status = subjectAttendance[subject];
         let cardBg, borderCol, statusIcon, statusColor;
 
@@ -277,14 +230,14 @@ export default function StudentDashboard() {
                 backgroundColor: cardBg,
                 borderColor: borderCol,
             }]}>
-                <View style={[styles.scheduleIconWrap, { backgroundColor: `${meta.accent}18` }]}>
-                    <MaterialCommunityIcons name={meta.icon} size={26} color={meta.accent} />
+                <View style={[styles.scheduleIconWrap, { backgroundColor: `${accent}18` }]}>
+                    <MaterialCommunityIcons name={icon} size={26} color={accent} />
                 </View>
                 <View style={styles.scheduleContent}>
                     <Text style={[styles.subjectName, { color: t('#1a1a2e', '#ffffff') }]}>{subject}</Text>
-                    {meta.category ? (
-                        <View style={[styles.schedulePill, { backgroundColor: `${meta.accent}15`, marginTop: 4 }]}>
-                            <Text style={[styles.schedulePillText, { color: meta.accent }]}>{meta.category}</Text>
+                    {category ? (
+                        <View style={[styles.schedulePill, { backgroundColor: `${accent}15`, marginTop: 4 }]}>
+                            <Text style={[styles.schedulePillText, { color: accent }]}>{category}</Text>
                         </View>
                     ) : null}
                 </View>
@@ -311,6 +264,14 @@ export default function StudentDashboard() {
             <ScrollView 
                 contentContainerStyle={[styles.container, { paddingBottom: 120 }]} 
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl 
+                        refreshing={refreshing} 
+                        onRefresh={onRefresh} 
+                        tintColor={isDark ? '#3d637e' : '#3d637e'} 
+                        colors={['#3d637e']} 
+                    />
+                }
             >
                 {activeTab === 'home' && (
                     <>
@@ -401,7 +362,7 @@ export default function StudentDashboard() {
                         <Text style={[styles.sectionSub, { color: t('#91939c', '#aeafb4') }]}>Overall progress by subject</Text>
                         
                         <View style={{ marginTop: 24, paddingBottom: 100 }}>
-                            {studentSubjects.map((sub, idx) => {
+                            {[...new Set(allLogs.map(l => l.subject))].map((sub, idx) => {
                                 const subLogs = allLogs.filter(l => l.subject === sub);
                                 if (subLogs.length === 0) return null;
                                 const total = subLogs.length;
@@ -437,9 +398,24 @@ export default function StudentDashboard() {
                         <Text style={[styles.sectionSub, { color: t('#91939c', '#aeafb4') }]}>Access materials from Google Drive</Text>
                         
                         <View style={{ marginTop: 20 }}>
-                            {['Engineering mechanics', 'Communication skills', 'Chemistry', 'Mathematical 2', 'PPS', 'workshop lab'].map((sub, idx) => (
-                                <ResourceCard key={idx} subject={sub} isDark={isDark} />
-                            ))}
+                            {dbSubjects
+                                .filter(dbSub => dbSub.resource_url)
+                                .map((dbSub, idx) => (
+                                    <ResourceCard 
+                                        key={idx} 
+                                        subject={dbSub.name} 
+                                        url={dbSub.resource_url} 
+                                        isDark={isDark} 
+                                        dbIcon={dbSub.icon} 
+                                        dbAccent={dbSub.accent_color} 
+                                    />
+                                ))
+                            }
+                            {dbSubjects.filter(d => d.resource_url).length === 0 && (
+                                <Text style={{ color: t('#91939c', '#aeafb4'), textAlign: 'center', marginTop: 20 }}>
+                                    No resources available yet. Admin will add links soon!
+                                </Text>
+                            )}
                         </View>
                     </View>
                 )}

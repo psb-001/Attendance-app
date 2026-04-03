@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState, useContext, Component } from 'react';
 import { View, ActivityIndicator, useColorScheme, Platform, StyleSheet } from 'react-native';
 import { Text, Button } from 'react-native-paper';
-import UpdateChecker from '../components/UpdateChecker';
+
 import { supabase } from '../lib/supabase';
 import { ThemeProvider, ThemeContext } from '../context/ThemeContext';
 
@@ -157,7 +157,6 @@ function RootLayoutNav() {
             <View style={{ flex: 1, backgroundColor: activeTheme.colors.background }}>
                 <View style={{ flex: 1, width: '100%', maxWidth: Platform.OS === 'web' ? 500 : '100%', alignSelf: 'center', overflow: 'hidden' }}>
                     <PaperProvider theme={activeTheme}>
-                        {/* <UpdateChecker /> */}
                         <Stack
                             screenOptions={{
                                 headerStyle: {
@@ -172,8 +171,8 @@ function RootLayoutNav() {
                         >
                             <Stack.Screen name="index" options={{ headerShown: false }} />
                             <Stack.Screen name="login" options={{ headerShown: false }} />
+                            <Stack.Screen name="admin-dashboard" options={{ headerShown: false }} />
                             <Stack.Screen name="student-dashboard" options={{ headerShown: false }} />
-                            <Stack.Screen name="profile" options={{ headerShown: false }} />
                             <Stack.Screen name="branch" options={{ headerShown: false }} />
                             <Stack.Screen name="batch" options={{ headerShown: false }} />
                             <Stack.Screen name="attendance" options={{ headerShown: false }} />

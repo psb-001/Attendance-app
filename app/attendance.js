@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useContext } from 'react';
-import { View, StyleSheet, FlatList, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
 import { Text, Button, ActivityIndicator, Card, IconButton, Searchbar } from 'react-native-paper';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useNetInfo } from '@react-native-community/netinfo';
@@ -16,6 +16,7 @@ export default function AttendanceScreen() {
     const [students, setStudents] = useState([]);
     const [attendance, setAttendance] = useState({});
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [alreadySubmitted, setAlreadySubmitted] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const { isDark } = useContext(ThemeContext);
@@ -102,6 +103,12 @@ export default function AttendanceScreen() {
         }
     };
 
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await loadData();
+        setRefreshing(false);
+    }, [loadData]);
+
     const setStatus = useCallback((rollNo, status) => {
         if (alreadySubmitted) return;
         setAttendance(prev => {
@@ -184,6 +191,14 @@ export default function AttendanceScreen() {
                     getItemLayout={(data, index) => (
                         { length: 80, offset: 80 * index, index }
                     )}
+                    refreshControl={
+                        <RefreshControl 
+                            refreshing={refreshing} 
+                            onRefresh={onRefresh} 
+                            tintColor={isDark ? '#3d637e' : '#3d637e'} 
+                            colors={['#3d637e']} 
+                        />
+                    }
                 />
             ) : (
                 <EmptyState 

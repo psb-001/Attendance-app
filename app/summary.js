@@ -6,7 +6,7 @@ import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getAttendance, markAsSubmitted, isSubmitted, resetSubmission } from '../services/storage';
 import { submitAttendance } from '../services/api';
-import { GOOGLE_SCRIPT_URL } from '../constants/config';
+import { getConfig } from '../services/config';
 import { getStudentBatch } from '../constants/batches';
 import { supabase } from '../lib/supabase';
 import { ThemeContext } from '../context/ThemeContext';
@@ -127,7 +127,7 @@ export default function SummaryScreen() {
     const handleReset = async () => {
         Alert.alert(
             'Reset Submission',
-            'Are you sure you want to reset? This will allow you to edit the attendance again.',
+            'This will let you edit the attendance and re-submit. Your current marks will be preserved.',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -135,22 +135,27 @@ export default function SummaryScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            const webhookUrl = SUBJECT_URLS[subject];
-                            if (webhookUrl) {
-                                await submitAttendance(webhookUrl, {
+                            // Delete from Google Sheets (so we don't have stale data)
+                            const googleScriptUrl = await getConfig('google_script_url');
+                            console.log('[Reset] Google Script URL:', googleScriptUrl ? 'Found' : 'EMPTY');
+                            if (googleScriptUrl) {
+                                console.log('[Reset] Sending delete to Google Sheets...');
+                                await submitAttendance(googleScriptUrl, {
                                     date,
                                     branch,
                                     subject,
                                     action: 'delete'
                                 });
+                                console.log('[Reset] Google Sheets delete SUCCESS');
                             }
+                            // Only clear the submitted flag — keep attendance marks
                             await resetSubmission(date, branch, subject, batch);
                             setAlreadySubmitted(false);
                             Alert.alert(
                                 'Reset Complete',
-                                'Submission deleted from Google Sheet and reset locally. You can now edit the attendance.',
+                                'You can now edit the attendance. Your previous marks are preserved.',
                                 [{
-                                    text: 'OK',
+                                    text: 'Edit Attendance',
                                     onPress: () => router.push({
                                         pathname: '/attendance',
                                         params: { date, branch, subject, batch }
@@ -158,13 +163,15 @@ export default function SummaryScreen() {
                                 }]
                             );
                         } catch (error) {
+                            console.warn('[Reset] Google Sheet delete failed:', error.message);
+                            // Still reset locally even if Google Sheet delete fails
                             await resetSubmission(date, branch, subject, batch);
                             setAlreadySubmitted(false);
                             Alert.alert(
                                 'Reset Complete',
-                                'Failed to delete from Google Sheet, but reset locally. You can now edit the attendance.',
+                                'Could not update Google Sheet, but you can still edit attendance locally.',
                                 [{
-                                    text: 'OK',
+                                    text: 'Edit Attendance',
                                     onPress: () => router.push({
                                         pathname: '/attendance',
                                         params: { date, branch, subject, batch }
@@ -207,7 +214,9 @@ export default function SummaryScreen() {
             setAlreadySubmitted(true);
 
             // --- SECONDARY: Try Google Sheets (non-blocking) ---
-            if (GOOGLE_SCRIPT_URL) {
+            const googleScriptUrl = await getConfig('google_script_url');
+            console.log('[Google Sheets] URL from config:', googleScriptUrl ? `"${googleScriptUrl}"` : 'EMPTY/NULL — skipping sync');
+            if (googleScriptUrl) {
                 const payload = {
                     date,
                     branch,
@@ -222,9 +231,10 @@ export default function SummaryScreen() {
                     absent: stats.absent,
                     percentage: stats.percentage,
                 };
-                submitAttendance(GOOGLE_SCRIPT_URL, payload).catch(err => {
-                    console.warn('Google Sheets sync failed (non-blocking):', err.message);
-                });
+                console.log('[Google Sheets] Sending payload for', branch, '-', subject);
+                submitAttendance(googleScriptUrl, payload)
+                    .then(res => console.log('[Google Sheets] Sync SUCCESS:', res))
+                    .catch(err => console.warn('[Google Sheets] Sync FAILED:', err.message));
             }
 
             Alert.alert(
