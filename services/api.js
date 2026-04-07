@@ -3,13 +3,14 @@ export const submitAttendance = async (url, data) => {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                // Use text/plain to bypass CORS preflight restrictions on Google Apps Script
+                'Content-Type': 'text/plain;charset=utf-8',
             },
             body: JSON.stringify({ ...data, action: data.action || 'submit' }),
         });
 
         const text = await response.text();
-        console.log('API Response:', text);
+        if (__DEV__) console.log('API Response:', text);
 
         let result;
         try {
@@ -24,7 +25,7 @@ export const submitAttendance = async (url, data) => {
 
         return result;
     } catch (error) {
-        console.error('Error submitting attendance:', error);
+        if (__DEV__) console.error('Error submitting attendance:', error);
         throw error;
     }
 };

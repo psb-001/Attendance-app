@@ -3,14 +3,16 @@ import { View, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { Text, Button, Card, List, Divider, ActivityIndicator } from 'react-native-paper';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getAttendance, markAsSubmitted, isSubmitted, resetSubmission } from '../services/storage';
 import { submitAttendance } from '../services/api';
 import { getConfig } from '../services/config';
-import { getStudentBatch } from '../constants/batches';
+import { getStudentBatch, fetchBatches } from '../constants/batches';
 import { supabase } from '../lib/supabase';
 import { ThemeContext } from '../context/ThemeContext';
 import EmptyState from '../components/EmptyState';
+import { formatDate } from '../utils/dashboardHelpers';
 
 export default function SummaryScreen() {
     const { date, branch, subject, batch } = useLocalSearchParams();
@@ -20,21 +22,7 @@ export default function SummaryScreen() {
     const { isDark } = useContext(ThemeContext);
     const t = (light, dark) => isDark ? dark : light;
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return 'Today';
-        try {
-            const [y, m, d] = dateStr.split('-').map(Number);
-            const dateObj = new Date(y, m - 1, d);
-            return dateObj.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-            });
-        } catch (e) {
-            return dateStr;
-        }
-    };
+
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -49,6 +37,8 @@ export default function SummaryScreen() {
 
     const loadData = async () => {
         try {
+            // Ensure batch ranges are loaded from DB before filtering
+            await fetchBatches();
             const fetchedAttendance = await getAttendance(date, branch, subject, batch);
             setAttendance(fetchedAttendance);
             const submitted = await isSubmitted(date, branch, subject, batch);
@@ -56,17 +46,19 @@ export default function SummaryScreen() {
 
             // Fetch students from Supabase
             const { data: fetchedStudents, error } = await supabase
-                .from('students')
-                .select('roll_no, name')
+                .from('students_registry')
+                .select('roll_no, full_name, is_active')
                 .eq('branch', branch)
                 .order('roll_no', { ascending: true });
 
             if (error) throw error;
 
-            let studentList = (fetchedStudents || []).map(s => ({
-                rollNo: s.roll_no,
-                name: s.name,
-            }));
+            let studentList = (fetchedStudents || [])
+                .filter(s => s.is_active !== false) // Only active students
+                .map(s => ({
+                    rollNo: s.roll_no,
+                    name: s.full_name,
+                }));
             
             if (batch) {
                 studentList = studentList.filter(s => getStudentBatch(s.rollNo) === batch);
@@ -94,7 +86,7 @@ export default function SummaryScreen() {
             setStats({ total, present: presentCount, absent: absentCount, percentage });
             setAbsentStudents(absentList);
         } catch (error) {
-            console.error('SummaryScreen loadData error:', error);
+            if (__DEV__) console.error('SummaryScreen loadData error:', error);
         } finally {
             setLoading(false);
         }
@@ -119,93 +111,175 @@ export default function SummaryScreen() {
             // Share the image
             await Sharing.shareAsync(uri);
         } catch (error) {
-            console.error('Share error:', error);
+            if (__DEV__) console.error('Share error:', error);
             Alert.alert('Error', 'Failed to share image.');
         }
     };
 
+    const handleSaveToGallery = async () => {
+        try {
+            if (Platform.OS === 'web') {
+                Alert.alert('Not Supported', 'Save to Gallery is only available on mobile devices.');
+                return;
+            }
+
+            // Ask for permissions
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission Denied', 'We need permission to save images to your gallery.');
+                return;
+            }
+
+            // Capture the view
+            const uri = await viewShotRef.current.capture();
+
+            // Save to library
+            await MediaLibrary.saveToLibraryAsync(uri);
+            Alert.alert('Success', 'Image saved to your gallery!');
+        } catch (error) {
+            if (__DEV__) console.error('Save to Gallery error:', error);
+            Alert.alert('Error', 'Failed to save image.');
+        }
+    };
+
     const handleReset = async () => {
-        Alert.alert(
-            'Reset Submission',
-            'This will let you edit the attendance and re-submit. Your current marks will be preserved.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Reset',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            // Delete from Google Sheets (so we don't have stale data)
-                            const googleScriptUrl = await getConfig('google_script_url');
-                            console.log('[Reset] Google Script URL:', googleScriptUrl ? 'Found' : 'EMPTY');
-                            if (googleScriptUrl) {
-                                console.log('[Reset] Sending delete to Google Sheets...');
-                                await submitAttendance(googleScriptUrl, {
-                                    date,
-                                    branch,
-                                    subject,
-                                    action: 'delete'
-                                });
-                                console.log('[Reset] Google Sheets delete SUCCESS');
-                            }
-                            // Only clear the submitted flag — keep attendance marks
-                            await resetSubmission(date, branch, subject, batch);
-                            setAlreadySubmitted(false);
-                            Alert.alert(
-                                'Reset Complete',
-                                'You can now edit the attendance. Your previous marks are preserved.',
-                                [{
-                                    text: 'Edit Attendance',
-                                    onPress: () => router.push({
-                                        pathname: '/attendance',
-                                        params: { date, branch, subject, batch }
-                                    })
-                                }]
-                            );
-                        } catch (error) {
-                            console.warn('[Reset] Google Sheet delete failed:', error.message);
-                            // Still reset locally even if Google Sheet delete fails
-                            await resetSubmission(date, branch, subject, batch);
-                            setAlreadySubmitted(false);
-                            Alert.alert(
-                                'Reset Complete',
-                                'Could not update Google Sheet, but you can still edit attendance locally.',
-                                [{
-                                    text: 'Edit Attendance',
-                                    onPress: () => router.push({
-                                        pathname: '/attendance',
-                                        params: { date, branch, subject, batch }
-                                    })
-                                }]
-                            );
-                        }
+        const confirmMsg = 'This will let you edit the attendance and re-submit. Your current marks will be preserved.';
+        const executeReset = async () => {
+            try {
+                // Delete from Google Sheets (so we don't have stale data)
+                const googleScriptUrl = await getConfig('google_script_url');
+                if (__DEV__) console.log('[Reset] Google Script URL:', googleScriptUrl ? 'Found' : 'EMPTY');
+                if (googleScriptUrl) {
+                    if (__DEV__) console.log('[Reset] Sending delete to Google Sheets...');
+                    await submitAttendance(googleScriptUrl, {
+                        date,
+                        branch,
+                        subject,
+                        batch,
+                        action: 'delete'
+                    });
+                    if (__DEV__) console.log('[Reset] Google Sheets delete SUCCESS');
+                }
+
+                // Delete from Supabase
+                if (__DEV__) console.log('[Reset] Deleting from Supabase...');
+                if (allStudents && allStudents.length > 0) {
+                    const rollNos = allStudents.map(s => s.rollNo);
+                    let deleteQuery = supabase
+                        .from('attendance_logs')
+                        .delete()
+                        .eq('date', date)
+                        .eq('branch', branch)
+                        .eq('subject', subject)
+                        .in('roll_no', rollNos);
+                    
+                    if (batch && batch !== 'undefined' && batch !== 'null') {
+                        deleteQuery = deleteQuery.eq('batch', batch);
+                    }
+                    
+                    const { error: supabaseError } = await deleteQuery;
+                    
+                    if (supabaseError) {
+                        if (__DEV__) console.warn('[Reset] Supabase delete failed:', supabaseError.message);
+                    } else {
+                        if (__DEV__) console.log('[Reset] Supabase delete SUCCESS');
                     }
                 }
-            ]
-        );
+
+                // Only clear the submitted flag — keep attendance marks
+                await resetSubmission(date, branch, subject, batch);
+                setAlreadySubmitted(false);
+                
+                const successMsg = 'You can now edit the attendance. Your previous marks are preserved.';
+                if (Platform.OS === 'web') {
+                    window.alert(`Reset Complete\n\n${successMsg}`);
+                    router.push({
+                        pathname: '/attendance',
+                        params: { date, branch, subject, batch }
+                    });
+                } else {
+                    Alert.alert(
+                        'Reset Complete',
+                        successMsg,
+                        [{
+                            text: 'Edit Attendance',
+                            onPress: () => router.push({
+                                pathname: '/attendance',
+                                params: { date, branch, subject, batch }
+                            })
+                        }]
+                    );
+                }
+            } catch (error) {
+                if (__DEV__) console.warn('[Reset] Error:', error.message);
+                // Still reset locally even if something failed
+                await resetSubmission(date, branch, subject, batch);
+                setAlreadySubmitted(false);
+                
+                const failMsg = 'Could not update remote database, but you can still edit attendance locally.';
+                if (Platform.OS === 'web') {
+                    window.alert(`Reset Complete\n\n${failMsg}`);
+                    router.push({
+                        pathname: '/attendance',
+                        params: { date, branch, subject, batch }
+                    });
+                } else {
+                    Alert.alert(
+                        'Reset Complete',
+                        failMsg,
+                        [{
+                            text: 'Edit Attendance',
+                            onPress: () => router.push({
+                                pathname: '/attendance',
+                                params: { date, branch, subject, batch }
+                            })
+                        }]
+                    );
+                }
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm(`Reset Submission\n\n${confirmMsg}`)) {
+                executeReset();
+            }
+        } else {
+            Alert.alert(
+                'Reset Submission',
+                confirmMsg,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Reset', style: 'destructive', onPress: executeReset }
+                ]
+            );
+        }
     };
 
     const handleSubmit = async () => {
-        // Prevent duplicate submissions
         if (alreadySubmitted) {
             Alert.alert('Already Submitted', 'This attendance has already been submitted.');
             return;
         }
 
+        const startTime = Date.now();
         setSubmitting(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            
             // --- PRIMARY: Write to Supabase first ---
+            const safeBatch = (batch && batch !== 'undefined' && batch !== 'null') ? batch : null;
             const supabaseRows = allStudents.map(s => ({
                 branch,
                 subject,
                 date,
+                batch: safeBatch,
                 roll_no: s.rollNo,
                 status: (attendance && attendance[s.rollNo]) ? 1 : 0,
             }));
 
             const { error: supabaseError } = await supabase
                 .from('attendance_logs')
-                .upsert(supabaseRows, { onConflict: 'branch,subject,date,roll_no' });
+                .upsert(supabaseRows, { onConflict: 'branch,subject,date,batch,roll_no' });
 
             if (supabaseError) throw supabaseError;
 
@@ -213,14 +287,26 @@ export default function SummaryScreen() {
             await markAsSubmitted(date, branch, subject, batch);
             setAlreadySubmitted(true);
 
+            // --- LOGGING: Record success and latency for Admin Dashboard ---
+            const latency = Date.now() - startTime;
+            try {
+                await supabase.from('system_logs').insert({
+                    event_type: 'SUCCESS',
+                    action_name: 'ATTENDANCE_SUBMIT',
+                    message: `Submitted ${allStudents.length} students for ${subject}`,
+                    user_id: session?.user?.id,
+                    latency_ms: latency
+                });
+            } catch (_) { /* system_logs table may not exist yet */ }
+
             // --- SECONDARY: Try Google Sheets (non-blocking) ---
             const googleScriptUrl = await getConfig('google_script_url');
-            console.log('[Google Sheets] URL from config:', googleScriptUrl ? `"${googleScriptUrl}"` : 'EMPTY/NULL — skipping sync');
             if (googleScriptUrl) {
                 const payload = {
                     date,
                     branch,
                     subject,
+                    batch,
                     studentStatuses: allStudents.map(s => ({
                         rollNo: s.rollNo,
                         name: s.name,
@@ -231,10 +317,8 @@ export default function SummaryScreen() {
                     absent: stats.absent,
                     percentage: stats.percentage,
                 };
-                console.log('[Google Sheets] Sending payload for', branch, '-', subject);
                 submitAttendance(googleScriptUrl, payload)
-                    .then(res => console.log('[Google Sheets] Sync SUCCESS:', res))
-                    .catch(err => console.warn('[Google Sheets] Sync FAILED:', err.message));
+                    .catch(err => { if (__DEV__) console.warn('[Google Sheets] Sync FAILED:', err.message); });
             }
 
             Alert.alert(
@@ -243,6 +327,17 @@ export default function SummaryScreen() {
                 [{ text: 'OK', onPress: () => router.push('/') }]
             );
         } catch (error) {
+            // LOGGING: Record the failure
+            const latency = Date.now() - startTime;
+            try {
+                await supabase.from('system_logs').insert({
+                    event_type: 'ERROR',
+                    action_name: 'ATTENDANCE_SUBMIT_FAILED',
+                    message: error.message,
+                    latency_ms: latency
+                });
+            } catch (_) { /* system_logs table may not exist yet */ }
+
             Alert.alert(
                 'Submission Failed',
                 `Error: ${error.message}\n\nPlease check your connection and try again.`
@@ -330,14 +425,24 @@ export default function SummaryScreen() {
             </ViewShot>
 
             {absentStudents.length > 0 && (
-                <Button
-                    mode={isDark ? "contained-tonal" : "outlined"}
-                    icon="share-variant"
-                    onPress={handleDownload}
-                    style={styles.downloadButton}
-                >
-                    Share Absent List
-                </Button>
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
+                    <Button
+                        mode={isDark ? "contained-tonal" : "outlined"}
+                        icon="share-variant"
+                        onPress={handleDownload}
+                        style={{ flex: 1 }}
+                    >
+                        Share List
+                    </Button>
+                    <Button
+                        mode="contained"
+                        icon="download"
+                        onPress={handleSaveToGallery}
+                        style={{ flex: 1 }}
+                    >
+                        Save Image
+                    </Button>
+                </View>
             )}
 
             <Card style={[styles.card, { backgroundColor: t('white', '#1e1e1e') }]}>

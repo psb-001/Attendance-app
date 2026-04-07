@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useContext } from 'react';
+import React, { useEffect, useState, useMemo, useContext } from 'react';
 import { View, StyleSheet, ScrollView, Image, ActivityIndicator, FlatList, TouchableOpacity, Platform, RefreshControl } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
 import { Text, Surface, IconButton, FAB, Portal, Modal, TextInput, Button } from 'react-native-paper';
@@ -12,7 +12,7 @@ import ProfileTab from '../components/ProfileTab';
 import CalendarStrip from '../components/CalendarStrip';
 import TeacherReportsTab from '../components/TeacherReportsTab';
 import TeacherSubjectsTab from '../components/TeacherSubjectsTab';
-import { generateMonthDays, getInitials } from '../utils/dashboardHelpers';
+import { generateMonthDays, getInitials, getGreeting } from '../utils/dashboardHelpers';
 import AppHeader from '../components/AppHeader';
 import EmptyState from '../components/EmptyState';
 
@@ -35,20 +35,24 @@ export default function HomeScreen() {
 
     const { isDark, toggleTheme } = useContext(ThemeContext);
     const monthDays = useMemo(() => generateMonthDays(calendarDate), [calendarDate.getMonth(), calendarDate.getFullYear()]);
-    const flatListRef = useRef(null);
 
     useEffect(() => {
         loadProfile();
+        
+        // 🕒 Heartbeat: Auto-refresh data every 5 seconds
+        const refreshInterval = setInterval(() => {
+            loadProfile();
+        }, 5000);
+
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-        return () => clearInterval(timer);
+        
+        return () => {
+            clearInterval(refreshInterval);
+            clearInterval(timer);
+        };
     }, []);
 
-    const getGreeting = () => {
-        const hrs = currentTime.getHours();
-        if (hrs < 12) return 'Good Morning';
-        if (hrs < 17) return 'Good Afternoon';
-        return 'Good Evening';
-    };
+
 
     const formattedDate = currentTime.toLocaleDateString('en-US', {
         weekday: 'short',
@@ -61,70 +65,48 @@ export default function HomeScreen() {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             
             if (sessionError || !session) {
-                console.log("Teacher session invalid, redirecting to login:", sessionError?.message);
+                if (__DEV__) console.log("Session invalid, redirecting to login");
                 await supabase.auth.signOut();
                 router.replace('/login');
                 return;
             }
 
-            const { data: profileData, error: profileError } = await supabase
+            // 🛡️ THE TEFLON BRIDGE: Pure fetch, no mess.
+            const { data: profile, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .maybeSingle();
 
-            if (profileError) {
-                console.error("Error fetching teacher profile:", profileError.message);
-            }
-
-            const profile = profileData ? {
-                ...profileData,
-                email: profileData.email || session.user.email,
-                full_name: profileData.full_name || profileData.name
-            } : {
-                email: session.user.email,
-                full_name: session.user.user_metadata?.full_name || 'Faculty Member',
-                role: 'teacher' // fallback
-            };
-
-            // Safety check: If a student lands here, send them to their dashboard
-            if (profile.role === 'student') {
-                console.log("Teacher Dashboard: User is a student, redirecting...");
-                router.replace('/student-dashboard');
-                return;
-            } else if (profile.role === 'admin') {
-                console.log("Teacher Dashboard: User is an admin, redirecting...");
-                router.replace('/admin-dashboard');
+            if (error || !profile || !profile.role || profile.role === 'not_enrolled') {
+                if (__DEV__) console.warn("Access Denied: You are not enrolled in the academic system.");
+                router.replace('/not-enrolled');
                 return;
             }
 
             setProfile(profile);
 
-            // Fetch ALL subjects from Supabase (single source of truth)
-            const { data: dbSubjects, error: dbSubjectsError } = await supabase
-                .from('subjects')
-                .select('*')
-                .order('name');
-            
-            if (dbSubjectsError) {
-                console.warn("Subjects fetch failed:", dbSubjectsError.message);
+            // 🚦 Traffic Controller
+            if (profile.role === 'student') {
+                router.replace('/student-dashboard');
+                return;
+            } else if (profile.role === 'admin') {
+                router.replace('/admin-dashboard');
+                return;
+            } else if (profile.role === 'teacher') {
+                // Teachers stay on index for attendance flow
+                const assignedSubjectNames = profile.subjects || [];
+                const { data: dbSubjects } = await supabase.from('subjects').select('*').order('name');
+                const safeDbSubjects = dbSubjects || [];
+                
+                const finalSubjects = assignedSubjectNames.length > 0 
+                    ? safeDbSubjects.filter(s => assignedSubjectNames.includes(s.name))
+                    : safeDbSubjects;
+                
+                setSubjects(finalSubjects);
             }
-
-            const safeDbSubjects = dbSubjects || [];
-            
-            // If teacher has specific subjects assigned, filter the DB list
-            const assignedSubjects = profileData?.subjects || [];
-            let finalSubjects;
-            if (assignedSubjects.length > 0) {
-                finalSubjects = safeDbSubjects.filter(s => assignedSubjects.includes(s.name));
-            } else {
-                // No assignment yet — show all subjects from DB (admin will assign later)
-                finalSubjects = safeDbSubjects;
-            }
-            
-            setSubjects(finalSubjects);
         } catch (err) {
-            console.error("Teacher auth check failed:", err);
+            if (__DEV__) console.error("Identity Engine Failure:", err);
             await supabase.auth.signOut();
             router.replace('/login');
         } finally {
@@ -186,7 +168,7 @@ export default function HomeScreen() {
                 profile={profile}
                 onOpenMenu={() => setIsSidebarOpen(true)}
                 onAvatarPress={() => setActiveTab('profile')}
-                roleTitle="TEACHER DASHBOARD"
+                roleTitle="PRESENLY"
             />
             <ScrollView 
                 contentContainerStyle={styles.container} 
@@ -204,7 +186,7 @@ export default function HomeScreen() {
                     <>
                         <View style={styles.greetingSection}>
                     <Text variant="displaySmall" style={[styles.greetingText, { color: t('#2f333a', '#ffffff') }]}>
-                        {getGreeting()}, {profile?.full_name || 'Faculty Member'}
+                        {getGreeting(currentTime)}, {profile?.full_name || 'Faculty Member'}
                     </Text>
                     <Text variant="bodyMedium" style={[styles.subGreeting, { color: t('#5b5f68', '#aeafb4') }]}>
                         {formattedDate}

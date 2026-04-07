@@ -11,7 +11,7 @@ import AppSidebar from '../components/AppSidebar';
 import InfoSections from '../components/InfoSections';
 import ProfileTab from '../components/ProfileTab';
 import CalendarStrip from '../components/CalendarStrip';
-import { generateMonthDays, getInitials } from '../utils/dashboardHelpers';
+import { generateMonthDays, getInitials, getGreeting } from '../utils/dashboardHelpers';
 import AppHeader from '../components/AppHeader';
 
 export default function StudentDashboard() {
@@ -40,12 +40,7 @@ export default function StudentDashboard() {
         return () => clearInterval(timer);
     }, []);
 
-    const getGreeting = () => {
-        const hrs = currentTime.getHours();
-        if (hrs < 12) return 'Hello'; // Morning
-        if (hrs < 17) return 'Good Afternoon';
-        return 'Good Evening';
-    };
+
 
     const formattedDate = currentTime.toLocaleDateString('en-US', {
         weekday: 'long',
@@ -58,76 +53,64 @@ export default function StudentDashboard() {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             
             if (sessionError || !session) {
-                console.log("Session invalid, redirecting to login:", sessionError?.message);
+                if (__DEV__) console.log("Session invalid, redirecting to login:", sessionError?.message);
                 await supabase.auth.signOut();
                 router.replace('/login');
                 return;
             }
 
+            // 🛡️ THE UNIVERSAL BRIDGE: Get the profile (Auto-Created by Database Trigger)
             const { data: profileData, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .maybeSingle();
 
-            if (profileError) {
-                console.error("Error fetching student profile:", profileError.message);
+            if (!profileData || profileData.role !== 'student') {
+                if (profileData && profileData.role !== 'student') {
+                    router.replace('/'); // Send to correct dashboard
+                    return;
+                }
+                if (__DEV__) console.warn("Access Denied: Account not enrolled or profile missing.");
+                router.replace('/login');
+                return;
             }
 
-            const currentProfile = profileData ? {
+            const currentProfile = {
                 ...profileData,
                 email: profileData.email || session.user.email,
                 full_name: profileData.full_name || profileData.name
-            } : {
-                email: session.user.email,
-                full_name: session.user.user_metadata?.full_name || 'Academic Student',
-                role: 'student' // fallback
             };
-
-            // Safety check: Route out non-students
-            if (currentProfile.role === 'teacher') {
-                console.log("Student Dashboard: User is a teacher, redirecting...");
-                router.replace('/');
-                return;
-            } else if (currentProfile.role === 'admin') {
-                console.log("Student Dashboard: User is an admin, redirecting...");
-                router.replace('/admin-dashboard');
-                return;
-            }
 
             setProfile(currentProfile);
 
-            // Fetch global subjects for resource URLs, icons, and colors
-            const { data: subData } = await supabase.from('subjects').select('name, resource_url, icon, accent_color, type');
+            // 1. Fetch Subjects
+            const { data: subData } = await supabase.from('subjects').select('name, resource_url, icon, accent_color, type, is_hidden');
             if (subData) {
-                setDbSubjects(subData);
+                // Filter out globally hidden subjects from the UI meta lookup
+                const visibleSubjects = subData.filter(d => d.is_hidden !== true);
+                setDbSubjects(visibleSubjects);
             }
 
-            // 2. If student has roll_no and branch, fetch real attendance
-            if (profileData?.roll_no && profileData?.branch) {
+            // 2. Fetch Attendance
+            if (profileData.roll_no && profileData.branch) {
                 const { data: logs } = await supabase
                     .from('attendance_logs')
                     .select('status, subject, date')
                     .eq('roll_no', profileData.roll_no)
                     .eq('branch', profileData.branch);
 
-                if (logs && logs.length > 0) {
+                if (logs) {
                     setAllLogs(logs);
-                    const safeLogs = logs || [];
-                    const total = safeLogs.length;
-                    const present = safeLogs.filter(l => l.status === 1).length;
-                    const pct = Math.round((present / total) * 100);
+                    const total = logs.length;
+                    const present = logs.filter(l => l.status === 1).length;
+                    const pct = total > 0 ? Math.round((present / total) * 100) : 0;
                     setAttendancePct(pct);
                     setAttendanceStats({ present, total });
-                } else {
-                    setAttendancePct(0);
-                    setAttendanceStats({ present: 0, total: 0 });
-                    setAllLogs([]);
                 }
             }
         } catch (err) {
-            console.error("Auth initialization failed:", err);
-            await supabase.auth.signOut();
+            if (__DEV__) console.error("Universal Init Crash:", err);
             router.replace('/login');
         } finally {
             setLoading(false);
@@ -167,7 +150,7 @@ export default function StudentDashboard() {
             await supabase.auth.signOut();
             router.replace('/login');
         } catch (err) {
-            console.error("Logout failed:", err);
+            if (__DEV__) console.error("Logout failed:", err);
         }
     };
 
@@ -197,7 +180,11 @@ export default function StudentDashboard() {
 
     // Build subject list from student's assigned subjects (set by admin)
     const studentSubjects = (profile?.subjects && profile.subjects.length > 0)
-        ? profile.subjects
+        ? profile.subjects.filter(subName => {
+              // Only show if it exists in dbSubjects (which we filtered hidden ones out of)
+              const meta = dbSubjects.find(d => d.name === subName);
+              return !!meta; // true if meta exists and is not hidden
+          })
         : [];
 
     const renderSubjectItem = (subject, idx) => {
@@ -259,7 +246,7 @@ export default function StudentDashboard() {
                 profile={profile}
                 onOpenMenu={() => setIsSidebarOpen(true)}
                 onAvatarPress={() => setActiveTab('profile')}
-                roleTitle="STUDENT DASHBOARD"
+                roleTitle="PRESENLY"
             />
             <ScrollView 
                 contentContainerStyle={[styles.container, { paddingBottom: 120 }]} 
@@ -277,7 +264,7 @@ export default function StudentDashboard() {
                     <>
                         <View style={styles.greetingSection}>
                             <Text variant="displaySmall" style={[styles.greetingTitle, { color: t('#2f333a', '#ffffff') }]}>
-                                {getGreeting()}, {profile?.full_name?.split(' ')[0] || 'Student'}!
+                                {getGreeting(currentTime)}, {profile?.full_name?.split(' ')[0] || 'Student'}!
                             </Text>
                             <Text variant="bodyLarge" style={[styles.greetingDate, { color: t('#91939c', '#aeafb4') }]}>{formattedDate}</Text>
                         </View>

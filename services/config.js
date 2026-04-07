@@ -19,7 +19,7 @@ export const getConfig = async (key) => {
             .maybeSingle();
 
         if (error) {
-            console.warn(`Config fetch failed for "${key}":`, error.message);
+            if (__DEV__) console.warn(`Config fetch failed for "${key}":`, error.message);
             return null;
         }
 
@@ -27,7 +27,7 @@ export const getConfig = async (key) => {
         configCache[key] = value;
         return value;
     } catch (err) {
-        console.warn(`Config fetch error for "${key}":`, err.message);
+        if (__DEV__) console.warn(`Config fetch error for "${key}":`, err.message);
         return null;
     }
 };

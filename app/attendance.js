@@ -5,9 +5,10 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { supabase } from '../lib/supabase';
 import { getAttendance, saveAttendance, isSubmitted } from '../services/storage';
-import { getStudentBatch } from '../constants/batches';
+import { getStudentBatch, fetchBatches } from '../constants/batches';
 import { ThemeContext } from '../context/ThemeContext';
 import EmptyState from '../components/EmptyState';
+import { formatDate } from '../utils/dashboardHelpers';
 
 export default function AttendanceScreen() {
     const { date, branch, subject, batch } = useLocalSearchParams();
@@ -22,55 +23,56 @@ export default function AttendanceScreen() {
     const { isDark } = useContext(ThemeContext);
     const t = (light, dark) => isDark ? dark : light;
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return 'Today';
-        try {
-            const [y, m, d] = dateStr.split('-').map(Number);
-            const dateObj = new Date(y, m - 1, d);
-            return dateObj.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-            });
-        } catch (e) {
-            return dateStr;
-        }
-    };
+
 
     useFocusEffect(
         useCallback(() => {
+            // 🧪 SMART LAB DETECTION: If it's a lab but no batch is selected, send them to select one.
+            const isLab = subject?.toLowerCase().endsWith('lab');
+            if (isLab && (!batch || batch === 'ALL')) {
+                router.replace({
+                    pathname: '/batch',
+                    params: { date, branch, subject }
+                });
+                return;
+            }
+
             loadData();
+
+            // Auto-refresh submission status every 5 seconds
+            const interval = setInterval(async () => {
+                const submitted = await isSubmitted(date, branch, subject, batch);
+                setAlreadySubmitted(submitted);
+            }, 5000);
+
+            return () => clearInterval(interval);
         }, [date, branch, subject, batch])
     );
 
     const loadData = async () => {
         setLoading(true);
         try {
-            // Include timeout to prevent infinite hang offline
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Network Timeout: Unable to fetch students while offline.')), 8000)
-            );
+            await fetchBatches();
+            
+            // 🛡️ IRONCLAD REGISTRY: We now fetch students from the 'students_registry' table.
+            // This is the single source of truth for enrolled students.
+            const { data: fetchedStudents, error } = await supabase
+                .from('students_registry')
+                .select('roll_no, full_name')
+                .eq('branch', branch)
+                .eq('is_active', true)
+                .order('roll_no', { ascending: true });
 
-            const response = await Promise.race([
-                supabase
-                    .from('students')
-                    .select('roll_no, name')
-                    .eq('branch', branch)
-                    .order('roll_no', { ascending: true }),
-                timeoutPromise
-            ]);
+            if (error) throw error;
 
-            if (response.error) throw response.error;
-            const fetchedStudents = response.data;
-
-            // Normalize to match old shape: { rollNo, name }
+            // Normalize to match local state shape
             let normalizedStudents = (fetchedStudents || []).map(s => ({
                 rollNo: s.roll_no,
-                name: s.name,
+                name: s.full_name,
             }));
 
-            if (batch) {
+            // Filter by Batch (B1, B2, B3) if selected
+            if (batch && batch !== 'ALL') {
                 normalizedStudents = normalizedStudents.filter(s => getStudentBatch(s.rollNo) === batch);
             }
 
@@ -84,7 +86,6 @@ export default function AttendanceScreen() {
             const savedAttendance = await getAttendance(date, branch, subject, batch);
             const initialAttendance = savedAttendance || {};
             
-            // For any student not in saved attendance (e.g. newly added), default to present (true)
             normalizedStudents.forEach(s => {
                 if (initialAttendance[s.rollNo] === undefined) {
                     initialAttendance[s.rollNo] = true; 
@@ -96,8 +97,8 @@ export default function AttendanceScreen() {
                 saveAttendance(date, branch, subject, batch, initialAttendance);
             }
         } catch (error) {
-            console.error('loadData error:', error);
-            Alert.alert('Data Error', error.message || 'Failed to load students. Please check your connection.');
+            if (__DEV__) console.error('loadData error:', error);
+            Alert.alert('Data Error', error.message || 'Failed to load students.');
         } finally {
             setLoading(false);
         }

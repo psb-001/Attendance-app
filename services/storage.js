@@ -14,7 +14,7 @@ export const saveAttendance = async (date, branch, subject, batch, data) => {
         const key = getAttendanceKey(date, branch, subject, batch);
         await AsyncStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-        console.error('Failed to save attendance', e);
+        if (__DEV__) console.error('Failed to save attendance', e);
     }
 };
 
@@ -47,7 +47,7 @@ export const getAttendance = async (date, branch, subject, batch = null) => {
 
         return null;
     } catch (e) {
-        console.error('Failed to fetch attendance', e);
+        if (__DEV__) console.error('Failed to fetch attendance', e);
         return null;
     }
 };
@@ -57,7 +57,7 @@ export const markAsSubmitted = async (date, branch, subject, batch = null) => {
         const key = `${getAttendanceKey(date, branch, subject, batch)}_submitted`;
         await AsyncStorage.setItem(key, 'true');
     } catch (e) {
-        console.error('Failed to mark as submitted', e);
+        if (__DEV__) console.error('Failed to mark as submitted', e);
     }
 };
 
@@ -71,12 +71,8 @@ export const isSubmitted = async (date, branch, subject, batch = null) => {
             return false;
         }
 
-        // If locally marked as submitted, trust that
-        if (localValue === 'true') {
-            return true;
-        }
-
-        // No local state — check Supabase as fallback (e.g. after app reinstall)
+        // Always verify against Supabase (source of truth)
+        // This ensures admin-side deletions are immediately reflected in the app
         let query = supabase
             .from('attendance_logs')
             .select('id', { head: true, count: 'exact' })
@@ -84,16 +80,28 @@ export const isSubmitted = async (date, branch, subject, batch = null) => {
             .eq('branch', branch)
             .eq('subject', subject);
 
+        if (batch && batch !== 'undefined' && batch !== 'null') {
+            query = query.eq('batch', batch);
+        }
+
         const { count, error } = await query;
+
         if (!error && count !== null && count > 0) {
+            // Supabase confirms data exists — mark locally and return true
             await AsyncStorage.setItem(key, 'true');
             return true;
         }
 
+        // Supabase says no data — clear stale local flag and return false
+        await AsyncStorage.removeItem(key);
         return false;
+
     } catch (e) {
-        console.error('Failed to check submission status', e);
-        return false;
+        if (__DEV__) console.error('Failed to check submission status', e);
+        // On network error, fall back to local cache if available
+        const key = `${getAttendanceKey(date, branch, subject, batch)}_submitted`;
+        const localValue = await AsyncStorage.getItem(key).catch(() => null);
+        return localValue === 'true';
     }
 };
 
@@ -107,7 +115,7 @@ export const resetSubmission = async (date, branch, subject, batch = null) => {
 
         // Keep attendance data intact — teacher will edit and re-submit
     } catch (e) {
-        console.error('Failed to reset submission status', e);
+        if (__DEV__) console.error('Failed to reset submission status', e);
     }
 };
 
@@ -118,7 +126,7 @@ export const resetAllAttendance = async () => {
         await AsyncStorage.multiRemove(attendanceKeys);
         return { success: true, count: attendanceKeys.length };
     } catch (e) {
-        console.error('Failed to reset all attendance', e);
+        if (__DEV__) console.error('Failed to reset all attendance', e);
         throw new Error('Failed to reset all attendance data');
     }
 };

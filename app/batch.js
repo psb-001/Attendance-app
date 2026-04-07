@@ -5,97 +5,110 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemeContext } from '../context/ThemeContext';
+import { formatDate } from '../utils/dashboardHelpers';
 
 const CARD_GAP = 16;
 const SCREEN_PADDING = 24;
-
-const BATCHES = [
-    { value: 'B1', label: 'Batch B1', icon: 'account-group', color: '#0984E3', bg: '#E3F2FD' },
-    { value: 'B2', label: 'Batch B2', icon: 'account-group', color: '#00B894', bg: '#E8F5E9' },
-    { value: 'B3', label: 'Batch B3', icon: 'account-group', color: '#00CEC9', bg: '#E0F7FA' },
-];
 
 export default function BatchScreen() {
     const router = useRouter();
     const { width: windowWidth } = useWindowDimensions();
     const { subject, date, branch } = useLocalSearchParams();
     const [authChecked, setAuthChecked] = useState(false);
+    const [dbBatches, setDbBatches] = useState([]);
     const { isDark } = useContext(ThemeContext);
 
     const t = (light, dark) => isDark ? dark : light;
 
     // Responsive Logic
-    const contentWidth = Math.min(windowWidth - (SCREEN_PADDING * 2), 652); // Keep it compact for 2 columns
+    const contentWidth = Math.min(windowWidth - (SCREEN_PADDING * 2), 652);
     const cardWidth = (contentWidth - CARD_GAP) / 2;
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return 'Today';
-        try {
-            const [y, m, d] = dateStr.split('-').map(Number);
-            const dateObj = new Date(y, m - 1, d);
-            return dateObj.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-            });
-        } catch (e) {
-            return dateStr;
-        }
-    };
+
+
+    const isLab = subject?.toLowerCase().endsWith('lab');
 
     useEffect(() => {
-        checkTeacher();
+        checkTeacherAndLoadBatches();
     }, []);
 
-    const checkTeacher = async () => {
+    const checkTeacherAndLoadBatches = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { router.replace('/login'); return; }
+        
+        // 🛡️ TRUST THE REGISTRY: Simplified role check
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-        if (!profile || profile.role !== 'teacher') { router.replace('/student-dashboard'); return; }
+        if (!profile || profile.role !== 'teacher') { 
+            router.replace(profile?.role === 'admin' ? '/admin-dashboard' : '/student-dashboard'); 
+            return; 
+        }
+
+        // Fetch batches from database
+        const { data: batches, error } = await supabase
+            .from('batches')
+            .select('*')
+            .order('sort_order', { ascending: true });
+        
+        if (!error && batches && batches.length > 0) {
+            setDbBatches(batches.map(b => ({
+                value: b.value,
+                label: b.name,
+                icon: b.icon || 'flask-outline', // Scientist icon for Labs
+                color: b.color || '#3d637e',
+                bg: `${b.color || '#3d637e'}20`,
+            })));
+        } else {
+            // Fallback to our B1, B2, B3 standards
+            setDbBatches([
+                { value: 'B1', label: 'Batch B1', icon: 'account-group', color: '#0984E3', bg: '#0984E320' },
+                { value: 'B2', label: 'Batch B2', icon: 'account-group', color: '#6C5CE7', bg: '#6C5CE720' },
+                { value: 'B3', label: 'Batch B3', icon: 'account-group', color: '#E17055', bg: '#E1705520' },
+            ]);
+        }
         setAuthChecked(true);
     };
 
     const handleSelect = (batchValue) => {
         router.push({
             pathname: '/attendance',
-            params: {
-                date,
-                branch,
-                subject,
-                batch: batchValue
-            }
+            params: { date, branch, subject, batch: batchValue }
         });
     };
 
     if (!authChecked) {
         return (
-            <View style={[styles.loadingContainer, { backgroundColor: t('#f9f9fe', '#000000') }]}>
+            <View style={[styles.loadingContainer, { backgroundColor: '#000000' }]}>
                 <ActivityIndicator size="large" color="#3d637e" />
             </View>
         );
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: t('#f9f9fe', '#000000') }]}>
+        <View style={[styles.container, { backgroundColor: '#000000' }]}>
             <View style={[styles.mainContent, { alignSelf: 'center', width: '100%', maxWidth: 700 }]}>
                 <View style={styles.topNav}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <MaterialCommunityIcons name="arrow-left" size={28} color={t('#2f333a', '#ffffff')} />
+                        <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.headerSection}>
-                    <Text variant="headlineMedium" style={[styles.headerTitle, { color: t('#2f333a', '#ffffff') }]}>
-                        Select Batch
+                    {isLab && (
+                        <View style={styles.labBadge}>
+                            <MaterialCommunityIcons name="flask-outline" size={16} color="#ff9800" />
+                            <Text style={styles.labBadgeText}>LAB MODE ACTIVE</Text>
+                        </View>
+                    )}
+                    <Text variant="headlineMedium" style={[styles.headerTitle, { color: '#ffffff' }]}>
+                        {isLab ? 'Select Lab Batch' : 'Select Batch'}
                     </Text>
-                    <Text style={[styles.headerSub, { color: t('#91939c', '#aeafb4') }]}>
-                        {subject} • {branch} • {formatDate(date)}
+                    <Text style={[styles.headerSub, { color: '#aeafb4' }]}>
+                        {subject} • {formatDate(date)}
                     </Text>
                 </View>
 
                 <View style={styles.grid}>
-                    {BATCHES.map((batchItem) => (
+                    {dbBatches.map((batchItem) => (
                         <TouchableOpacity
                             key={batchItem.value}
                             style={[styles.card, {
@@ -161,6 +174,25 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         marginTop: 6,
         letterSpacing: -0.2,
+    },
+    labBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        alignSelf: 'flex-start',
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 152, 0, 0.2)',
+    },
+    labBadgeText: {
+        color: '#ff9800',
+        fontSize: 12,
+        fontWeight: '900',
+        letterSpacing: 1.5,
+        marginLeft: 6,
     },
     grid: {
         flexDirection: 'row',

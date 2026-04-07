@@ -5,24 +5,19 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemeContext } from '../context/ThemeContext';
+import { formatDate } from '../utils/dashboardHelpers';
 import AppHeader from '../components/AppHeader';
 
 const SCREEN_PADDING = 24;
 const CARD_GAP = 16;
 const MAX_CONTENT_WIDTH = 1200;
 
-const BRANCHES = [
-    { value: 'AI / ML', label: 'AI / ML', icon: 'robot-outline', color: '#0984E3', bg: '#E3F2FD' },
-    { value: 'Computer Engineering', label: 'Computer\nEngineering', icon: 'code-braces', color: '#00B894', bg: '#E8F5E9' },
-    { value: 'Electronics and Telecommunication Engineering', label: 'E&TC', icon: 'chip', color: '#00CEC9', bg: '#E0F7FA' },
-    { value: 'Information Technology', label: 'Information\nTechnology', icon: 'monitor', color: '#636E72', bg: '#F5F5F5' },
-];
-
 export default function BranchScreen() {
     const router = useRouter();
     const { width: windowWidth } = useWindowDimensions();
     const { subject, date } = useLocalSearchParams();
     const [authChecked, setAuthChecked] = useState(false);
+    const [dbBranches, setDbBranches] = useState([]);
     const [profile, setProfile] = useState(null);
     const { isDark } = useContext(ThemeContext);
 
@@ -32,21 +27,7 @@ export default function BranchScreen() {
     const contentWidth = Math.min(windowWidth - (SCREEN_PADDING * 2), 600);
     const cardWidth = (contentWidth - CARD_GAP) / 2;
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return 'Today';
-        try {
-            const [y, m, d] = dateStr.split('-').map(Number);
-            const dateObj = new Date(y, m - 1, d);
-            return dateObj.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-            });
-        } catch (e) {
-            return dateStr;
-        }
-    };
+
 
     useEffect(() => {
         checkTeacher();
@@ -55,9 +36,45 @@ export default function BranchScreen() {
     const checkTeacher = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { router.replace('/login'); return; }
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        if (!profile || profile.role !== 'teacher') { router.replace('/student-dashboard'); return; }
+        
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+        if (!profile || (profile.role !== 'teacher' && profile.role !== 'admin')) {
+            if (__DEV__) console.warn("Access Denied: You are not authorized for this view.");
+            router.replace('/');
+            return;
+        }
+
         setProfile(profile);
+
+        // Fetch branches from database
+        const { data: branches, error: branchError } = await supabase
+            .from('branches')
+            .select('*')
+            .order('sort_order', { ascending: true });
+        
+        if (!branchError && branches && branches.length > 0) {
+            setDbBranches(branches.map(b => ({
+                value: b.value,
+                label: b.label.replace('\\n', '\n'),
+                icon: b.icon || 'robot-outline',
+                color: b.color || '#3d637e',
+                bg: b.bg_light || '#f5f5f5',
+            })));
+        } else {
+            // Fallback if the Supabase `branches` table hasn't been created yet
+            setDbBranches([
+                { value: 'Computer Engineering', label: 'Computer\nEngineering', icon: 'laptop', color: '#0984E3', bg: '#e6f3ff' },
+                { value: 'AI / ML', label: 'AI & Machine\nLearning', icon: 'robot-outline', color: '#6C5CE7', bg: '#f1efff' },
+                { value: 'Information Technology', label: 'Information\nTechnology', icon: 'database', color: '#00B894', bg: '#e0fff4' },
+                { value: 'Electronics and Telecommunication Engineering', label: 'Electronics &\nTelecom', icon: 'broadcast', color: '#E17055', bg: '#ffebe3' },
+            ]);
+        }
+        
         setAuthChecked(true);
     };
 
@@ -93,7 +110,7 @@ export default function BranchScreen() {
                 </View>
 
                 <FlatList
-                    data={BRANCHES}
+                    data={dbBranches}
                     keyExtractor={(item) => item.value}
                     numColumns={2}
                     contentContainerStyle={styles.content}

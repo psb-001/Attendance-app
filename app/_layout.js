@@ -6,6 +6,12 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState, useContext, Component } from 'react';
 import { View, ActivityIndicator, useColorScheme, Platform, StyleSheet } from 'react-native';
 import { Text, Button } from 'react-native-paper';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Lock the splash screen until all fonts and auth states are perfectly resolved
+SplashScreen.preventAutoHideAsync().catch(() => {
+    // It's okay if this throws (e.g. on web)
+});
 
 import { supabase } from '../lib/supabase';
 import { ThemeProvider, ThemeContext } from '../context/ThemeContext';
@@ -16,13 +22,13 @@ class ErrorBoundary extends Component {
         return { hasError: true, error };
     }
     componentDidCatch(error, errorInfo) {
-        console.error("FATAL UI ERROR:", error, errorInfo);
+        if (__DEV__) console.error("FATAL UI ERROR:", error, errorInfo);
     }
     render() {
         if (this.state.hasError) {
             return (
                 <View style={errorStyles.container}>
-                    <Text variant="headlineMedium" style={errorStyles.title}>Orion Encountered an Error</Text>
+                    <Text variant="headlineMedium" style={errorStyles.title}>Presenly Encountered an Error</Text>
                     <Text style={errorStyles.errorText}>{this.state.error?.toString()}</Text>
                     <Button mode="contained" onPress={() => { /* Reload logic if possible */ }} style={errorStyles.button}>
                         Try Again
@@ -108,8 +114,9 @@ function RootLayoutNav() {
     const activeTheme = isDark ? amoledDarkTheme : lightTheme;
     const router = useRouter();
     const segments = useSegments();
+    const isLogin = segments[0] === 'login';
+    const isAdminDashboard = segments[0] === 'admin-dashboard';
     const [session, setSession] = useState(null);
-    const [role, setRole] = useState(null);
     const [authReady, setAuthReady] = useState(false);
     const [initError, setInitError] = useState(null);
 
@@ -121,13 +128,15 @@ function RootLayoutNav() {
                 
                 if (sessionError) throw sessionError;
                 
-                console.log("Layout: Initial session fetch:", initialSession?.user?.id || "Null");
+                if (__DEV__) console.log("Layout: Initial session fetch:", initialSession?.user?.id || "Null");
                 setSession(initialSession);
             } catch (err) {
-                console.error("Initialization Error:", err);
+                if (__DEV__) console.error("Initialization Error:", err);
                 setInitError(err.message);
             } finally {
                 setAuthReady(true);
+                // Hide the splash screen only when everything is perfectly ready
+                await SplashScreen.hideAsync();
             }
         };
 
@@ -135,27 +144,22 @@ function RootLayoutNav() {
 
         // 2. Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            console.log("Layout: Auth state change event:", _event, session?.user?.id || "Null");
+            if (__DEV__) console.log("Layout: Auth state change event:", _event, session?.user?.id || "Null");
             setSession(session);
         });
 
         return () => subscription.unsubscribe();
     }, []);
 
-    // Show spinner while waiting for AsyncStorage to restore session
+    // Keep the app blank behind the locked splash screen
     if (!authReady) {
-        return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#000000' : '#f9f9fe' }}>
-                <ActivityIndicator size="large" color={isDark ? '#ffffff' : '#3d637e'} />
-                {initError && <Text style={{ color: 'red', marginTop: 10 }}>{initError}</Text>}
-            </View>
-        );
+        return null;
     }
 
     return (
         <SafeAreaProvider>
-            <View style={{ flex: 1, backgroundColor: activeTheme.colors.background }}>
-                <View style={{ flex: 1, width: '100%', maxWidth: Platform.OS === 'web' ? 500 : '100%', alignSelf: 'center', overflow: 'hidden' }}>
+            <View style={{ flex: 1, backgroundColor: isLogin ? '#000000' : activeTheme.colors.background }}>
+                <View style={{ flex: 1, width: '100%', maxWidth: Platform.OS === 'web' ? (isAdminDashboard ? 1200 : 500) : '100%', alignSelf: 'center', overflow: 'hidden', backgroundColor: isLogin ? '#000000' : 'transparent' }}>
                     <PaperProvider theme={activeTheme}>
                         <Stack
                             screenOptions={{
