@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Text, Surface, Button, IconButton } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
@@ -9,6 +9,7 @@ import CalendarStrip from './CalendarStrip';
 import { generateMonthDays } from '../utils/dashboardHelpers';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { useRouter } from 'expo-router';
 
 export default function TeacherReportsTab({ profile }) {
@@ -45,9 +46,10 @@ export default function TeacherReportsTab({ profile }) {
             }
 
             // Fetch logs. If teacher has a branch assigned, filter by it.
+            // Try with batch column first, fall back without it if column doesn't exist yet
             let query = supabase
                 .from('attendance_logs')
-                .select('subject, branch, roll_no, status')
+                .select('subject, branch, batch, roll_no, status')
                 .eq('date', queryDate);
             
             // Filter by subjects assigned to this teacher
@@ -57,9 +59,31 @@ export default function TeacherReportsTab({ profile }) {
                 query = query.eq('branch', profile.branch);
             }
 
-            const { data, error: sbError } = await query;
-            if (sbError) throw sbError;
+            let { data, error: sbError } = await query;
             
+            // If it failed (batch column may not exist yet), retry without batch
+            if (sbError) {
+                let fallbackQuery = supabase
+                    .from('attendance_logs')
+                    .select('subject, branch, roll_no, status')
+                    .eq('date', queryDate)
+                    .in('subject', profile.subjects);
+                if (profile?.branch) {
+                    fallbackQuery = fallbackQuery.eq('branch', profile.branch);
+                }
+                const fallbackResult = await fallbackQuery;
+                if (fallbackResult.error) throw fallbackResult.error;
+                data = (fallbackResult.data || []).map(d => ({ ...d, batch: null }));
+            }
+            
+            const { data: registryData } = await supabase.from('students_registry').select('roll_no, full_name, branch');
+            const nameMap = {};
+            if (registryData) {
+                registryData.forEach(s => {
+                    nameMap[`${s.branch}_${s.roll_no}`] = s.full_name;
+                });
+            }
+
             // Group the logs by subject/branch/batch
             const grouped = {};
             data.forEach(log => {
@@ -77,7 +101,10 @@ export default function TeacherReportsTab({ profile }) {
                 }
                 grouped[key].total += 1;
                 if (log.status === 1) grouped[key].present += 1;
-                grouped[key].students.push(log);
+                grouped[key].students.push({
+                    ...log,
+                    name: nameMap[`${log.branch}_${log.roll_no}`] || 'Unknown Student'
+                });
             });
             
             setLogs(Object.values(grouped));
@@ -144,11 +171,13 @@ export default function TeacherReportsTab({ profile }) {
                     <table>
                         <tr>
                             <th>Roll Number</th>
+                            <th>Name</th>
                             <th>Status</th>
                         </tr>
                         ${classData.students.sort((a,b) => parseInt(a.roll_no) - parseInt(b.roll_no)).map(s => `
                             <tr>
                                 <td>${s.roll_no}</td>
+                                <td>${s.name}</td>
                                 <td class="${s.status === 1 ? 'present' : 'absent'}">${s.status === 1 ? 'Present' : 'Absent'}</td>
                             </tr>
                         `).join('')}
@@ -157,10 +186,34 @@ export default function TeacherReportsTab({ profile }) {
                 </html>
             `;
             
-            const { uri } = await Print.printToFileAsync({ html: htmlContent });
-            await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+            if (Platform.OS === 'web') {
+                await Print.printAsync({ html: htmlContent });
+            } else if (Platform.OS === 'android') {
+                const { uri } = await Print.printToFileAsync({ html: htmlContent });
+                try {
+                    const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+                    if (permissions.granted) {
+                        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+                        const safeSubject = classData.subject.replace(/[^a-zA-Z0-9]/g, '_');
+                        const newUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, `${safeSubject}_Report.pdf`, 'application/pdf');
+                        await FileSystem.writeAsStringAsync(newUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+                        Alert.alert("Success", "PDF saved! Check your Downloads/Files folder.");
+                    } else {
+                        await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+                    }
+                } catch (e) {
+                    await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+                }
+            } else {
+                const { uri } = await Print.printToFileAsync({ html: htmlContent });
+                await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: 'Save Attendance PDF' });
+            }
         } catch (error) {
             console.error("PDF generation error: ", error);
+            Alert.alert(
+                "Export Failed",
+                "There was a problem generating the PDF. Please check your connection and try again."
+            );
         }
     };
 
@@ -233,7 +286,10 @@ export default function TeacherReportsTab({ profile }) {
                 <View style={[styles.studentList, { backgroundColor: t('#ffffff', '#1e1e1e') }]}>
                     {selectedClass.students.sort((a,b) => parseInt(a.roll_no) - parseInt(b.roll_no)).map((s, idx) => (
                         <View key={idx} style={[styles.studentRow, { borderBottomColor: t('#f1f5f9', '#333'), borderBottomWidth: idx < selectedClass.students.length - 1 ? 1 : 0 }]}>
-                            <Text style={{ fontWeight: '600', color: t('#1a1a2e', '#ffffff') }}>Roll No {s.roll_no}</Text>
+                            <View>
+                                <Text style={{ fontWeight: '600', color: t('#1a1a2e', '#ffffff') }}>Roll No {s.roll_no}</Text>
+                                <Text style={{ fontSize: 12, color: t('#64748b', '#94a3b8'), marginTop: 2 }}>{s.name}</Text>
+                            </View>
                             <View style={[styles.statusBadge, { backgroundColor: s.status === 1 ? t('#e8f5e9', 'rgba(76,175,80,0.1)') : t('#ffebee', 'rgba(244,67,54,0.1)') }]}>
                                 <Text style={{ fontSize: 12, fontWeight: 'bold', color: s.status === 1 ? '#4caf50' : '#f44336' }}>
                                     {s.status === 1 ? 'Present' : 'Absent'}

@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "attendance-app",
-    "slug": "attendance-app",
-    "scheme": "attendance-app",
+    "name": "PRESENLY",
+    "slug": "presenly",
+    "scheme": "presenly",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
@@ -30,7 +30,7 @@
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO"
       ],
-      "package": "com.mlcoe.attendanceapp"
+      "package": "com.presenly.attendanceapp"
     },
     "web": {
       "favicon": "./assets/app-icon.png"

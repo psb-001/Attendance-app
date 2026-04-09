@@ -50,20 +50,22 @@ export default function ProfileTab({ profile, onLogout, roleLabel = 'User' }) {
                 </Text>
             </View>
 
-            {/* Info Cards */}
-            <View style={styles.profileStatsRow}>
-                <Surface style={[styles.profileStatCard, { backgroundColor: t('#f2f3fa', '#121212'), borderColor: t('#3d637e20', '#3d637e40') }]} elevation={0}>
-                    <View style={[styles.statIconBox, { backgroundColor: t('#3d637e10', '#3d637e20') }]}>
-                        <MaterialCommunityIcons name="office-building" size={20} color={t('#3d637e', '#b8dffe')} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.profileStatLabel, { color: t('#5b5f68', '#aeafb4') }]}>DEPARTMENT</Text>
-                        <Text style={[styles.profileStatValue, { color: t('#2f333a', '#ffffff') }]} numberOfLines={1}>
-                            {profile?.branch || profile?.department || 'Information Technology'}
-                        </Text>
-                    </View>
-                </Surface>
-            </View>
+            {/* Info Cards - Hidden for Admins */}
+            {profile?.role !== 'admin' && (
+                <View style={styles.profileStatsRow}>
+                    <Surface style={[styles.profileStatCard, { backgroundColor: t('#f2f3fa', '#121212'), borderColor: t('#3d637e20', '#3d637e40') }]} elevation={0}>
+                        <View style={[styles.statIconBox, { backgroundColor: t('#3d637e10', '#3d637e20') }]}>
+                            <MaterialCommunityIcons name="office-building" size={20} color={t('#3d637e', '#b8dffe')} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.profileStatLabel, { color: t('#5b5f68', '#aeafb4') }]}>DEPARTMENT</Text>
+                            <Text style={[styles.profileStatValue, { color: t('#2f333a', '#ffffff') }]} numberOfLines={1}>
+                                {profile?.branch || profile?.department || 'Information Technology'}
+                            </Text>
+                        </View>
+                    </Surface>
+                </View>
+            )}
 
             {/* Account Settings */}
             <Text style={[styles.profileSectionHeader, { color: t('#91939c', '#aeafb4') }]}>ACCOUNT SETTINGS</Text>

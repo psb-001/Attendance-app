@@ -126,7 +126,7 @@ export default function Login() {
                                     <Text style={[styles.cardLabel, { color: '#ffffff' }]}>VERIFICATION CODE</Text>
                                     <TextInput
                                         mode="outlined"
-                                        placeholder="Enter 6-digit OTP"
+                                        placeholder="Enter 8-digit OTP"
                                         value={otp}
                                         onChangeText={setOtp}
                                         keyboardType="number-pad"

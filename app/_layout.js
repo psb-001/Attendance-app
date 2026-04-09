@@ -1,6 +1,7 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { PaperProvider, MD3LightTheme, MD3DarkTheme, configureFonts } from 'react-native-paper';
-import { useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
+import { useFonts as useOutfitFonts, Outfit_700Bold, Outfit_600SemiBold } from '@expo-google-fonts/outfit';
+import { useFonts as useInterFonts, Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState, useContext, Component } from 'react';
@@ -48,7 +49,22 @@ const errorStyles = StyleSheet.create({
 });
 
 const fontConfig = {
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'Inter_400Regular',
+    displayLarge: { fontFamily: 'Outfit_700Bold', fontWeight: '700' },
+    displayMedium: { fontFamily: 'Outfit_700Bold', fontWeight: '700' },
+    displaySmall: { fontFamily: 'Outfit_700Bold', fontWeight: '700' },
+    headlineLarge: { fontFamily: 'Outfit_600SemiBold', fontWeight: '600' },
+    headlineMedium: { fontFamily: 'Outfit_600SemiBold', fontWeight: '600' },
+    headlineSmall: { fontFamily: 'Outfit_600SemiBold', fontWeight: '600' },
+    titleLarge: { fontFamily: 'Outfit_600SemiBold', fontWeight: '600' },
+    titleMedium: { fontFamily: 'Inter_500Medium', fontWeight: '500' },
+    titleSmall: { fontFamily: 'Inter_500Medium', fontWeight: '500' },
+    bodyLarge: { fontFamily: 'Inter_400Regular', fontWeight: '400' },
+    bodyMedium: { fontFamily: 'Inter_400Regular', fontWeight: '400' },
+    bodySmall: { fontFamily: 'Inter_400Regular', fontWeight: '400' },
+    labelLarge: { fontFamily: 'Inter_500Medium', fontWeight: '500' },
+    labelMedium: { fontFamily: 'Inter_500Medium', fontWeight: '500' },
+    labelSmall: { fontFamily: 'Inter_500Medium', fontWeight: '500' },
 };
 const customFonts = configureFonts({config: fontConfig});
 
@@ -91,14 +107,16 @@ const amoledDarkTheme = {
 };
 
 export default function Layout() {
-    const [fontsLoaded] = useFonts({
-        PlusJakartaSans_400Regular,
-        PlusJakartaSans_600SemiBold,
-        PlusJakartaSans_700Bold,
-        PlusJakartaSans_800ExtraBold,
+    const [outfitLoaded] = useOutfitFonts({
+        Outfit_700Bold,
+        Outfit_600SemiBold,
+    });
+    const [interLoaded] = useInterFonts({
+        Inter_400Regular,
+        Inter_500Medium,
     });
 
-    if (!fontsLoaded) return null;
+    if (!outfitLoaded || !interLoaded) return null;
 
     return (
         <ErrorBoundary>

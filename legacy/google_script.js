@@ -18,11 +18,23 @@ function doPost(e) {
         else if (data.branch.includes('Electronic') || data.branch.includes('Telecommunication') || data.branch.includes('ENTC')) shortBranch = 'ENTC';
         else shortBranch = data.branch.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
 
-        // Make tab name shorter: "Chemistry - AIML"
+        // Make tab name shorter: "Chemistry - AIML - B1"
         const cleanSubject = data.subject.replace(/[^a-zA-Z0-9 ]/g, '');
-        const sheetName = `${cleanSubject} - ${shortBranch}`.substring(0, 31);
+        let titleString = `${cleanSubject} - ${shortBranch}`;
+        const hasBatch = data.batch && data.batch !== 'undefined' && data.batch !== 'null';
+        if (hasBatch) {
+             titleString += ` - ${data.batch}`;
+        }
+        const sheetName = titleString.substring(0, 31);
         
+        // Also build the old name (without batch) as a fallback for delete actions
+        const oldSheetName = `${cleanSubject} - ${shortBranch}`.substring(0, 31);
+
         let sheet = ss.getSheetByName(sheetName);
+        // If not found and this is a delete, try the old naming format too
+        if (!sheet && action === 'delete' && hasBatch) {
+            sheet = ss.getSheetByName(oldSheetName);
+        }
 
         // Header Row Index (shifted down because of title rows)
         const HEADER_ROW = 4;
@@ -36,7 +48,8 @@ function doPost(e) {
             
             // Add Title Rows at the top
             sheet.getRange(1, 1).setValue(`Branch: ${data.branch}`).setFontWeight("bold").setFontSize(14).setFontColor("#3d637e");
-            sheet.getRange(2, 1).setValue(`Subject: ${data.subject}`).setFontWeight("bold").setFontSize(12).setFontColor("#555555");
+            const batchText = hasBatch ? ` | Batch: ${data.batch}` : '';
+            sheet.getRange(2, 1).setValue(`Subject: ${data.subject}${batchText}`).setFontWeight("bold").setFontSize(12).setFontColor("#555555");
             
             // Add Table Headers at Row 4
             sheet.getRange(HEADER_ROW, 1).setValue("Roll No").setFontWeight("bold").setBackground("#f0f0f0");

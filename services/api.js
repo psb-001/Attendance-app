@@ -25,7 +25,7 @@ export const submitAttendance = async (url, data) => {
 
         return result;
     } catch (error) {
-        if (__DEV__) console.error('Error submitting attendance:', error);
+        if (__DEV__) console.warn('Background sync warning:', error.message);
         throw error;
     }
 };

@@ -18,17 +18,18 @@ export default function InfoSections({ activeTab }) {
             <View style={{ marginTop: 24 }}>
                 <Surface style={[styles.infoCard, { backgroundColor: t('#ffffff', '#1e1e1e') }]} elevation={2}>
                     <Text variant="headlineSmall" style={[styles.infoTitle, { color: t('#2f333a', '#ffffff') }]}>
-                        About Academic Portal
+                        About PRESENTLY
                     </Text>
                     <Text style={[styles.infoText, { color: t('#5b5f68', '#aeafb4') }]}>
-                        This Academic Portal is an advanced system designed for high-performance attendance tracking and resource sharing.
-                        {"\n\n"}
-                        Built with a mission to simplify the academic experience, we provide teachers and students with real-time analytics and seamless access to study materials.
+                        PRESENTLY is an advanced academic platform designed to streamline attendance management and resource sharing with precision and efficiency. It empowers institutions with real-time analytics and effortless access to learning materials.
                     </Text>
                     <View style={styles.infoFooter}>
-                        <Text style={styles.footerBrand}>Powered by Academic Services</Text>
+                        <Text style={styles.footerBrand}>Powered by MES MLCOE</Text>
                         <Text style={styles.footerVersion}>v2.4.0 (Stable)</Text>
                     </View>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: t('#91939c', '#aeafb4'), marginTop: 8 }}>
+                        Developed and maintained by Prathamesh Bhujbal
+                    </Text>
                 </Surface>
             </View>
         );
@@ -42,13 +43,49 @@ export default function InfoSections({ activeTab }) {
                         Privacy Policy
                     </Text>
                     <Text style={[styles.infoText, { color: t('#5b5f68', '#aeafb4') }]}>
-                        Your privacy is extremely important to us. This application does not share your personal attendance data or identity with third-party tracking services.
+                        Last Updated: April 5, 2026
                         {"\n\n"}
-                        All academic data is securely stored and encrypted via Supabase and used strictly for institutional reporting and performance monitoring.
+                        PRESENTLY ("the App") is an institutional attendance management system developed for internal academic use. Your privacy is our priority.
+                        {"\n\n"}
+                        1. DATA WE COLLECT{"\n"}
+                        • Account Information: Name, institutional email address, and role (student/teacher/admin) collected during Google Sign-In.{"\n"}
+                        • Academic Data: Branch, roll number, subject enrollment, and daily attendance records (present/absent status).{"\n"}
+                        • Device Data: Minimal local storage (AsyncStorage) is used to cache attendance status for offline access. No device identifiers are collected.
+                        {"\n\n"}
+                        2. HOW WE USE YOUR DATA{"\n"}
+                        • To record and display attendance for students and teachers.{"\n"}
+                        • To generate attendance reports and PDF exports for institutional use.{"\n"}
+                        • To sync attendance records with authorized Google Sheets for administrative reporting.{"\n"}
+                        • To provide real-time analytics on the Admin Dashboard.
+                        {"\n\n"}
+                        3. DATA STORAGE & SECURITY{"\n"}
+                        • All data is stored securely on Supabase (PostgreSQL) with Row Level Security (RLS) policies enforced.{"\n"}
+                        • Authentication is handled via Supabase Auth with Google OAuth 2.0 — we never store your Google password.{"\n"}
+                        • Attendance data is additionally synced to a designated Google Sheet via Google Apps Script for backup and reporting.{"\n"}
+                        • Local device cache is used only for performance optimization and is cleared on logout.
+                        {"\n\n"}
+                        4. THIRD-PARTY SERVICES{"\n"}
+                        • Google Sign-In (Authentication){"\n"}
+                        • Supabase (Database & Auth){"\n"}
+                        • Google Sheets API (Attendance Backup){"\n"}
+                        We do not use any advertising, analytics, or tracking SDKs.
+                        {"\n\n"}
+                        5. DATA SHARING{"\n"}
+                        • Your data is never sold or shared with third-party marketing services.{"\n"}
+                        • Attendance records are accessible only to authorized teachers (their assigned subjects) and administrators.{"\n"}
+                        • Students can only view their own attendance data.
+                        {"\n\n"}
+                        6. DATA RETENTION & DELETION{"\n"}
+                        • Attendance records are retained for the academic year.{"\n"}
+                        • Administrators can delete attendance records at any time via the Admin Dashboard.{"\n"}
+                        • Account deletion requests can be made to your institution's administrator.
+                        {"\n\n"}
+                        7. CONTACT{"\n"}
+                        For any privacy-related questions, please contact your institution's IT administrator.
                     </Text>
                     <View style={styles.infoFooter}>
                         <MaterialCommunityIcons name="shield-check" size={24} color="#426658" />
-                        <Text style={[styles.footerText, { color: '#426658' }]}>Your data is safe and encrypted.</Text>
+                        <Text style={[styles.footerText, { color: '#426658' }]}>Your data is protected by RLS & OAuth 2.0</Text>
                     </View>
                 </Surface>
             </View>

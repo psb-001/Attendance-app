@@ -27,6 +27,8 @@ export default function AdminDashboard() {
     const [recentLogs, setRecentLogs] = useState([]);
     const [systemLogs, setSystemLogs] = useState([]);
     const [dbLatency, setDbLatency] = useState(0);
+    const [dbStatus, setDbStatus] = useState('Connecting...');
+    const [realtimePing, setRealtimePing] = useState(0);
 
     // Curriculum Engine State
     const [subjectModalVisible, setSubjectModalVisible] = useState(false);
@@ -83,10 +85,32 @@ export default function AdminDashboard() {
                     fetchAdminData(); // Refresh the traffic graphs!
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    setDbStatus('Healthy');
+                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    setDbStatus('Offline');
+                }
+            });
+
+        // 💓 HEARTBEAT PING interval
+        const heartbeatInterval = setInterval(async () => {
+            const start = Date.now();
+            const { error } = await supabase.from('system_logs').select('id').limit(1);
+            const ping = Date.now() - start;
+            setRealtimePing(ping);
+            if (error) {
+                setDbStatus('Offline');
+            } else if (ping > 500) {
+                setDbStatus('Degraded');
+            } else {
+                setDbStatus('Healthy');
+            }
+        }, 30000); // 30 seconds
 
         // Cleanup the WebSocket when the admin leaves the dashboard
         return () => {
+            clearInterval(heartbeatInterval);
             supabase.removeChannel(channel);
         };
     }, []);
@@ -543,8 +567,8 @@ export default function AdminDashboard() {
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
                             <Text variant="headlineSmall" style={[styles.sectionTitle, { color: t('#2f333a', '#ffffff'), marginBottom: 0 }]}>Command Center</Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#00B894', marginRight: 6 }} />
-                                <Text style={{ color: t('#5b5f68', '#aeafb4'), fontSize: 12, fontWeight: '700' }}>API: {dbLatency}ms</Text>
+                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dbStatus === 'Healthy' ? '#00B894' : dbStatus === 'Degraded' ? '#FDCB6E' : '#d63031', marginRight: 6, shadowColor: dbStatus === 'Healthy' ? '#00B894' : dbStatus === 'Degraded' ? '#FDCB6E' : '#d63031', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 4, elevation: 2 }} />
+                                <Text style={{ color: t('#5b5f68', '#aeafb4'), fontSize: 12, fontWeight: '700' }}>{dbStatus} • {realtimePing > 0 ? `${realtimePing}ms` : `${dbLatency}ms`}</Text>
                             </View>
                         </View>
 

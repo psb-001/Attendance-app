@@ -2,21 +2,7 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { SUBJECT_RESOURCES } from '../constants/config';
-
-const SUBJECT_META = {
-    'Mathematical 2': { icon: 'calculator-variant', category: 'THEORY', accent: '#6C5CE7' },
-    'Chemistry': { icon: 'flask-outline', category: 'THEORY', accent: '#00B894' },
-    'Engineering mechanics': { icon: 'cog-outline', category: 'THEORY', accent: '#E17055' },
-    'PPS': { icon: 'code-tags', category: 'THEORY', accent: '#0984E3' },
-    'Communication skills': { icon: 'microphone-outline', category: 'THEORY', accent: '#FDCB6E' },
-    'Mathematical 2 lab': { icon: 'calculator-variant', category: 'LAB', accent: '#6C5CE7' },
-    'PPS lab': { icon: 'code-tags-check', category: 'LAB', accent: '#0984E3' },
-    'Communication skills lab': { icon: 'microphone-variant', category: 'LAB', accent: '#FDCB6E' },
-    'workshop lab': { icon: 'hammer-wrench', category: 'LAB', accent: '#E84393' },
-    'Engineering mechanics lab': { icon: 'cog-outline', category: 'LAB', accent: '#E17055' },
-    'Chemistry lab': { icon: 'flask', category: 'LAB', accent: '#00B894' },
-};
+import { SUBJECT_META } from '../utils/dashboardHelpers';
 
 const ResourceCard = ({ subject, url, isDark = false, dbIcon = null, dbAccent = null }) => {
     const staticMeta = SUBJECT_META[subject] || {};
@@ -27,7 +13,7 @@ const ResourceCard = ({ subject, url, isDark = false, dbIcon = null, dbAccent = 
     }), [subject, dbIcon, dbAccent]);
 
     const handleOpenResources = async () => {
-        const finalUrl = url || SUBJECT_RESOURCES[subject];
+        const finalUrl = url;
         if (finalUrl) {
             const canOpen = await Linking.canOpenURL(finalUrl);
             if (canOpen) {

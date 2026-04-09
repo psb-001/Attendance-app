@@ -123,8 +123,8 @@ export default function SummaryScreen() {
                 return;
             }
 
-            // Ask for permissions
-            const { status } = await MediaLibrary.requestPermissionsAsync();
+            // Ask for permissions (pass true to strictly request WRITE-only, avoiding audio permission crash on Android 13+)
+            const { status } = await MediaLibrary.requestPermissionsAsync(true);
             if (status !== 'granted') {
                 Alert.alert('Permission Denied', 'We need permission to save images to your gallery.');
                 return;
